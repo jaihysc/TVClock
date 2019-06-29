@@ -1,6 +1,6 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<BorderPane fx:controller="TVClockServer.layout.Controller" id="BorderPane" xmlns:fx="http://javafx.com/fxml"
+<BorderPane fx:controller="layout.Controller" id="BorderPane" xmlns:fx="http://javafx.com/fxml"
             style="-fx-background-color: black">
     <center>
         <SplitPane dividerPositions="0.20" focusTraversable="true" prefHeight="600.0" prefWidth="200.0">
@@ -42,7 +42,7 @@
 
 <!--    Notice bar-->
     <top>
-        <Label text="Notice bar, this bar will be used to annoy me" BorderPane.alignment="CENTER" alignment="CENTER"/>
+        <Label fx:id="noticeBar" id="noticeBar" text="Notice bar, this bar will be used to annoy me" BorderPane.alignment="CENTER" alignment="CENTER"/>
     </top>
 
 

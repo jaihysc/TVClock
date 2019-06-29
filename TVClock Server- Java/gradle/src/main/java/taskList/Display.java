@@ -1,4 +1,4 @@
-package TVClockServer.taskList;
+package taskList;
 
 /**
  *Formats and handles the appearance of the tasklist

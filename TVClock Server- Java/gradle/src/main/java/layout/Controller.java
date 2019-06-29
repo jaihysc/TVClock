@@ -1,5 +1,6 @@
-package TVClockServer.layout;
+package layout;
 
+import docs.DocsFacade;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -8,16 +9,15 @@ import javafx.scene.control.Label;
 import javafx.util.Duration;
 
 import java.net.URL;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable {
     public Label timeLabel;
     public Label dateLabel;
     public Label amPmLabel;
+    public Label noticeBar;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -26,11 +26,24 @@ public class Controller implements Initializable {
 
         //Task list
         initializeTaskList();
+
+        //Notice bar
+//        UpdateNoticeBar();
     }
 
     //Fetch task list information... TODO
     private void initializeTaskList() {
 
+    }
+
+    private void UpdateNoticeBar() {
+        Timeline notice = new Timeline(new KeyFrame(Duration.ZERO, e -> {
+            noticeBar.setText(DocsFacade.fetchDoc());
+
+        }), new KeyFrame(Duration.minutes(1)));
+
+        notice.setCycleCount(Animation.INDEFINITE);
+        notice.play();
     }
 
     /**
