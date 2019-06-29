@@ -1,0 +1,55 @@
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<BorderPane fx:controller="TVClockServer.layout.Controller" id="BorderPane" xmlns:fx="http://javafx.com/fxml"
+            style="-fx-background-color: black">
+    <center>
+        <SplitPane dividerPositions="0.20" focusTraversable="true" prefHeight="600.0" prefWidth="200.0">
+            <BorderPane style="-fx-background-color: black;">
+                <top>
+                    <Label alignment="CENTER" text="Top"  BorderPane.alignment="CENTER" />
+                </top>
+                <center>
+                    <ListView>
+
+                    </ListView>
+                </center>
+                <bottom>
+                    <Label alignment="CENTER" text="Bottom"  BorderPane.alignment="CENTER" />
+                </bottom>
+            </BorderPane>
+
+            <BorderPane style="-fx-background-color: black;">
+                <top>
+                    <Label alignment="CENTER" text="Alert Bar"  BorderPane.alignment="CENTER" />
+                </top>
+                <center>
+                    <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+                        <HBox alignment="CENTER">
+                            <Label fx:id="timeLabel" id="timeLabel" text="9:00:60"/>
+                            <VBox alignment="BOTTOM_CENTER">
+                                <Label fx:id="amPmLabel" id="amPmLabel" text="AM"/>
+                            </VBox>
+                        </HBox>
+                        <Label fx:id="dateLabel" id="dateLabel" text="Sunday, 27 June 2019"/>
+                    </VBox>
+                </center>
+                <bottom>
+                    <Label alignment="CENTER" text="Weather"  BorderPane.alignment="CENTER" />
+                </bottom>
+            </BorderPane>
+        </SplitPane>
+    </center>
+
+<!--    Notice bar-->
+    <top>
+        <Label text="Notice bar, this bar will be used to annoy me" BorderPane.alignment="CENTER" alignment="CENTER"/>
+    </top>
+
+
+<!--    TODO bottom car could have a slider showing progression to the different events-->
+    <bottom>
+        <Label alignment="CENTER" maxHeight="1.8" maxWidth="1.7976931348623157E308"
+               style="-fx-background-color: linear-gradient(to bottom, paleturquoise, azure, paleturquoise);&#10;"
+               text="Work status (Productivity) (Break)" BorderPane.alignment="CENTER" />
+    </bottom>
+</BorderPane>

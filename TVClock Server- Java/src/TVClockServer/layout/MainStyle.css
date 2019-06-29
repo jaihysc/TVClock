@@ -1,0 +1,27 @@
+.split-pane > .split-pane-divider {
+    /* Removes the ugly splitpane divider */
+    -fx-background-color: black;
+}
+
+#timeLabel {
+    -fx-font-size: 360;
+    -fx-padding: 0 0 0 0;
+    -fx-text-fill: white;
+    -fx-font-weight: bolder;
+    -fx-font-family: Arial, sans-serif;
+}
+
+#amPmLabel {
+    -fx-font-size: 40;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-padding: -200 0 0 0;
+}
+
+#dateLabel {
+    -fx-font-family: "Segoe UI", sans-serif;
+    -fx-padding: -20 0 0 0;
+    -fx-font-size: 80;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
