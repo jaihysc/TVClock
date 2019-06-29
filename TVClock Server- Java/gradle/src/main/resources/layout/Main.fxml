@@ -42,7 +42,9 @@
 
 <!--    Notice bar-->
     <top>
-        <Label fx:id="noticeBar" id="noticeBar" text="Notice bar, this bar will be used to annoy me" BorderPane.alignment="CENTER" alignment="CENTER"/>
+        <VBox id="noticeBar" BorderPane.alignment="CENTER" alignment="CENTER">
+            <Label fx:id="noticeText" id="noticeText" text="Notice bar, this bar will be used to annoy me" BorderPane.alignment="CENTER" alignment="CENTER"/>
+        </VBox>
     </top>
 
 

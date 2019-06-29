@@ -12,7 +12,7 @@ public class Main extends Application {
         Parent root = FXMLLoader.load(getClass().getResource("layout/Main.fxml"));
 
         primaryStage.setTitle("Hello World");
-//        primaryStage.initStyle(StageStyle.UNDECORATED);
+//        primaryStage.initStyle(StageStyle.UNDECORATED); //TODO, uncomment this to remove borders in production
         Scene scene = new Scene(root, 1920, 1080);
         scene.getStylesheets().add("layout/MainStyle.css");
         primaryStage.setScene(scene);

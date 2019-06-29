@@ -3,6 +3,16 @@
     -fx-background-color: black;
 }
 
+/*Notice bar*/
+#noticeBar {
+    -fx-background-color: white;
+}
+
+#noticeText {
+    -fx-font-size: 20;
+}
+
+/* Main info */
 #timeLabel {
     -fx-font-size: 360;
     -fx-padding: 0 0 0 0;

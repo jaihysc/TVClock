@@ -12,12 +12,13 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ResourceBundle;
+import java.util.regex.Pattern;
 
 public class Controller implements Initializable {
     public Label timeLabel;
     public Label dateLabel;
     public Label amPmLabel;
-    public Label noticeBar;
+    public Label noticeText;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -28,7 +29,7 @@ public class Controller implements Initializable {
         initializeTaskList();
 
         //Notice bar
-//        UpdateNoticeBar();
+        UpdateNoticeBar();
     }
 
     //Fetch task list information... TODO
@@ -38,7 +39,7 @@ public class Controller implements Initializable {
 
     private void UpdateNoticeBar() {
         Timeline notice = new Timeline(new KeyFrame(Duration.ZERO, e -> {
-            noticeBar.setText(DocsFacade.fetchDoc());
+            noticeText.setText(DocsFacade.fetchDoc());
 
         }), new KeyFrame(Duration.minutes(1)));
 
@@ -55,7 +56,9 @@ public class Controller implements Initializable {
 
             dateLabel.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy")));
 
-            amPmLabel.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("a")));
+            amPmLabel.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("a"))
+                    .replaceAll(Pattern.quote("."), "") //Remove the dots between A.M. and P.M.
+                    .toUpperCase());
 
         }), new KeyFrame(Duration.millis(500)));
 
