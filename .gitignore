@@ -1,8 +1,7 @@
 .idea/
 out/
 TVClock Server- Java.iml
-credentials.json
-
+confidential/
 .gradle/
 build/
 

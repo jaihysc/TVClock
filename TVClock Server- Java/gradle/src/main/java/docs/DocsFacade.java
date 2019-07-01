@@ -12,9 +12,7 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.docs.v1.Docs;
 import com.google.api.services.docs.v1.DocsScopes;
-import com.google.api.services.docs.v1.model.Body;
 import com.google.api.services.docs.v1.model.Document;
-import com.google.api.services.docs.v1.model.Paragraph;
 import com.google.api.services.docs.v1.model.StructuralElement;
 
 import java.io.FileNotFoundException;
@@ -34,12 +32,8 @@ public class DocsFacade {
     //TODO switch to private editable doc instead of testing doc
     private static final String DocumentId = "195j9eDD3ccgjQRttHhJPymLJUCOUjs-jmwTrekvdjFE";
 
-    /**
-     * Global instance of the scopes required by this quickstart.
-     * If modifying these scopes, delete your previously saved tokens/ folder.
-     */
     private static final List<String> Scopes = Collections.singletonList(DocsScopes.DOCUMENTS_READONLY);
-    private static final String CredentialsPath = "/credentials.json";
+    private static final String CredentialsPath = "/confidential/credentials.json";
 
     /**
      * Creates an authorized Credential object.
@@ -50,9 +44,10 @@ public class DocsFacade {
     private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT) throws IOException {
         // Load client secrets.
         InputStream in = DocsFacade.class.getResourceAsStream(CredentialsPath);
-        if (in == null) {
+
+        if (in == null)
             throw new FileNotFoundException("Resource not found: " + CredentialsPath);
-        }
+
         GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JsonFactory, new InputStreamReader(in));
 
         // Build flow and trigger user authorization request.
@@ -64,8 +59,6 @@ public class DocsFacade {
         LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
         return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
     }
-
-
 
     public static String fetchDoc() {
         // Build a new authorized API client service.
@@ -90,7 +83,7 @@ public class DocsFacade {
             return text.toString();
 
         } catch (Exception e) {
-            System.out.println("Error fetching Doc");
+            System.out.println("DOCSFACADE | Error fetching document");
             return "Error fetching notices";
         }
     }

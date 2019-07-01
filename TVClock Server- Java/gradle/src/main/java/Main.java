@@ -3,6 +3,8 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import networking.ConnectionManager;
+import networking.PacketHandler;
 
 
 public class Main extends Application {
@@ -20,6 +22,10 @@ public class Main extends Application {
     }
 
     public static void main(String[] args) {
+        //Networking test
+        ConnectionManager conman = new ConnectionManager(4999);
+        conman.handleMessages(new PacketHandler());
+        //
         launch(args);
     }
 }

@@ -52,7 +52,7 @@ public class Controller implements Initializable {
      */
     private void updateTime() {
         Timeline clock = new Timeline(new KeyFrame(Duration.ZERO, e -> {
-            timeLabel.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+            timeLabel.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("hh:mm:ss")));
 
             dateLabel.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy")));
 
