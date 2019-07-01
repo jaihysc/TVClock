@@ -8,6 +8,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import com.google.gson.Gson;
+import networking.models.IMessageReceived;
+import networking.models.Packet;
 
 public class ConnectionManager {
     private PrintWriter Out;

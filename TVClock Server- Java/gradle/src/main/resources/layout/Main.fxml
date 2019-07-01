@@ -33,8 +33,43 @@
                         <Label fx:id="dateLabel" id="dateLabel" text="Sunday, 27 June 2019"/>
                     </VBox>
                 </center>
+
                 <bottom>
-                    <Label alignment="CENTER" text="Weather"  BorderPane.alignment="CENTER" />
+                    <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+<!--                        Weather bar-->
+                        <BorderPane>
+                            <left>
+                                <HBox id="temperatureBar">
+                                    <Label fx:id="temperatureLabel" styleClass="weatherBarElement" text="88.8°C" />
+                                    <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+                                        <Label fx:id="uvIndexLabel" styleClass="weatherBarElement" text="UV | 10" />
+                                    </VBox>
+                                    <VBox alignment="CENTER">
+                                        <Label fx:id="humidityLabel" styleClass="weatherBarElement" text="H | 100%"/>
+                                    </VBox>
+                                </HBox>
+                            </left>
+
+                            <center>
+                                <Label fx:id="weatherDescription"  text="Weather Description" />
+                            </center>
+
+                            <right>
+                                <HBox id="environmentBar">
+                                    <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+                                        <Label fx:id="precipitationLabel" styleClass="weatherBarElement" text="P | 100%" />
+                                    </VBox>
+                                    <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+                                        <Label fx:id="windDirectionLabel" styleClass="weatherBarElement" text="NW" />
+                                    </VBox>
+                                    <Label fx:id="windSpeedLabel" styleClass="weatherBarElement" text="8.88 Km/h" />
+                                </HBox>
+                            </right>
+                        </BorderPane>
+
+<!--                        Forecast bar-->
+                        <Label fx:id="forecastBar" id="forecastBar" text="5 day forecast" />
+                    </VBox>
                 </bottom>
             </BorderPane>
         </SplitPane>

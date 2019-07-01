@@ -1,4 +1,4 @@
-package networking;
+package networking.models;
 
 import taskList.TaskItem;
 
@@ -7,6 +7,7 @@ import java.util.List;
 
 public class Packet {
     public Date timestamp; //Send timestamp
+    public RequestType requestType;
 
     public TaskList taskList;
     public Schedule schedule;
