@@ -9,6 +9,7 @@ public class List {
     private Sys sys;
     private String dtTxt;
     private Rain rain;
+    private Snow snow;
 
     public long getDt() { return dt; }
     public void setDt(long value) { this.dt = value; }
@@ -33,4 +34,7 @@ public class List {
 
     public Rain getRain() { return rain; }
     public void setRain(Rain value) { this.rain = value; }
+
+    public Snow getSnow() { return snow; }
+    public void setSnow(Snow snow) { this.snow = snow; }
 }

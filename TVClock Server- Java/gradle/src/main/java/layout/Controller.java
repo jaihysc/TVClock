@@ -97,6 +97,7 @@ public class Controller implements Initializable {
     private void updateWeather() {
         Timeline t = new Timeline(new KeyFrame(Duration.ZERO, e -> {
             ForecastResponse forecastResponse = OpenWeatherMapFacade.getForecastInfo();
+            updateUVIndex();
 
             if (forecastResponse == null) {
                 weatherDescription.setText("Unable to fetch weather information");
@@ -120,8 +121,15 @@ public class Controller implements Initializable {
             temperatureLabel.setText(temperature.getTemp() + " C");
             humidityLabel.setText("H | " + temperature.getHumidity() + "%");
 
-            //This comes back null
-//            precipitationLabel.setText("P | " + response.getRain().getThe3H());
+            //This comes back null if there is no rain / snow
+            Rain rain;
+            Snow snow;
+            if ((rain = response.getRain()) != null && rain.getThe3H() != null)
+                precipitationLabel.setText("P | " + rain.getThe3H() + "mm");
+            else if ((snow = response.getSnow()) != null && snow.getThe3H() != null)
+                precipitationLabel.setText("P | " + snow.getThe3H() + "mm");
+            else
+                precipitationLabel.setText("");
 
             Wind wind = response.getWind();
             //Convert m/s to km/h
@@ -131,6 +139,14 @@ public class Controller implements Initializable {
 
         t.setCycleCount(Animation.INDEFINITE);
         t.play();
+    }
+
+    private void updateUVIndex() {
+        UVIndexResponse response = OpenWeatherMapFacade.getUVIndex();
+        if (response == null)
+            return;
+
+        uvIndexLabel.setText("UV | " + response.getValue() + "");
     }
 
     private String degreeToCardinal(double degree) {

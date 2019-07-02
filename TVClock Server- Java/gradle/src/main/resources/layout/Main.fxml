@@ -61,7 +61,7 @@
                             <right>
                                 <HBox id="environmentBar">
                                     <VBox alignment="CENTER" BorderPane.alignment="CENTER">
-                                        <Label fx:id="precipitationLabel" styleClass="weatherBarElement" text="P | 100%" />
+                                        <Label fx:id="precipitationLabel" styleClass="weatherBarElement" text="P | 100mm" />
                                     </VBox>
                                     <VBox alignment="CENTER" BorderPane.alignment="CENTER">
                                         <Label fx:id="windDirectionLabel" styleClass="weatherBarElement" text="NW" />
@@ -125,7 +125,7 @@
     </top>
 
 
-<!--    TODO bottom car could have a slider showing progression to the different events-->
+<!--    TODO bottom bar could have a slider showing progression to the different events-->
     <bottom>
         <Label alignment="CENTER" maxHeight="1.8" maxWidth="1.7976931348623157E308"
                style="-fx-background-color: linear-gradient(to bottom, paleturquoise, azure, paleturquoise);&#10;"
