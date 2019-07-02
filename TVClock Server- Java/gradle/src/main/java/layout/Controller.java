@@ -23,8 +23,7 @@ public class Controller implements Initializable {
 
     public Label noticeText;
 
-    public Label forecastBar;
-
+    //Weather bar
     public Label weatherDescription;
     public Label temperatureLabel;
     public Label uvIndexLabel;
@@ -33,6 +32,12 @@ public class Controller implements Initializable {
     public Label precipitationLabel;
     public Label windDirectionLabel;
     public Label windSpeedLabel;
+    
+    public Label forecastLabel0;
+    public Label forecastLabel1;
+    public Label forecastLabel2;
+    public Label forecastLabel3;
+    public Label forecastLabel4;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -54,6 +59,9 @@ public class Controller implements Initializable {
 
     }
 
+    /**
+     * Calls the google docs api for notices
+     */
     private void updateNoticeBar() {
         Timeline notice = new Timeline(new KeyFrame(Duration.ZERO, e -> {
             noticeText.setText(DocsFacade.fetchDoc());
@@ -83,12 +91,30 @@ public class Controller implements Initializable {
         clock.play();
     }
 
+    /**
+     * Calls the OpenWeatherMap API to update the weather status on screen
+     */
     private void updateWeather() {
         Timeline t = new Timeline(new KeyFrame(Duration.ZERO, e -> {
-            List response = OpenWeatherMapFacade.getForecastInfo().getList()[0];
+            ForecastResponse forecastResponse = OpenWeatherMapFacade.getForecastInfo();
+
+            if (forecastResponse == null) {
+                weatherDescription.setText("Unable to fetch weather information");
+                return;
+            }
+
+            List response = forecastResponse.getList()[0];
 
             Weather weather = response.getWeather()[0];
             weatherDescription.setText(weather.getDescription());
+
+            //Set the forecast labels
+            forecastLabel0.setText(forecastResponse.getList()[8].getWeather()[0].getDescription());
+            forecastLabel1.setText(forecastResponse.getList()[16].getWeather()[0].getDescription());
+            forecastLabel2.setText(forecastResponse.getList()[24].getWeather()[0].getDescription());
+            forecastLabel3.setText(forecastResponse.getList()[32].getWeather()[0].getDescription());
+            forecastLabel4.setText(forecastResponse.getList()[39].getWeather()[0].getDescription());
+
 
             MainClass temperature = response.getMain();
             temperatureLabel.setText(temperature.getTemp() + " C");

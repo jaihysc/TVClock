@@ -20,7 +20,7 @@ public class Main extends Application {
     }
 
     public static void main(String[] args) {
-        //Networking test
+        //Networking test`
 //        ConnectionManager conman = new ConnectionManager(4999);
 //        conman.handleMessages(new PacketHandler());
         //

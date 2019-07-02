@@ -73,3 +73,8 @@
     -fx-padding: 0 12 0 6;
     -fx-font-size: 20;
 }
+
+.forecastLabel {
+    -fx-font-size: 18;
+    -fx-text-fill: darkgray;
+}

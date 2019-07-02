@@ -1,5 +1,9 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.shape.Line?>
 <BorderPane fx:controller="layout.Controller" id="BorderPane" xmlns:fx="http://javafx.com/fxml"
             style="-fx-background-color: black">
     <center>
@@ -65,10 +69,48 @@
                                     <Label fx:id="windSpeedLabel" styleClass="weatherBarElement" text="8.88 Km/h" />
                                 </HBox>
                             </right>
+
+                            <padding>
+                                <Insets bottom="2"/>
+                            </padding>
                         </BorderPane>
 
+<!--                        White horizontal divider-->
+                        <GridPane style="-fx-background-color: gray">
+                            <padding>
+                                <Insets top="1"/>
+                            </padding>
+                        </GridPane>
+
 <!--                        Forecast bar-->
-                        <Label fx:id="forecastBar" id="forecastBar" text="5 day forecast" />
+                        <GridPane>
+                            <padding>
+                                <Insets top="1"/>
+                            </padding>
+                            <columnConstraints>
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="20.0" percentWidth="20.0" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="20.0" percentWidth="20.0" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="20.0" percentWidth="20.0" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="20.0" percentWidth="20.0" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="20.0" percentWidth="20.0" />
+                            </columnConstraints>
+
+                            <VBox GridPane.columnIndex="0" alignment="CENTER">
+                                <Label fx:id="forecastLabel0" styleClass="forecastLabel" text="1 day ahead"/>
+                            </VBox>
+                            <VBox GridPane.columnIndex="1" alignment="CENTER">
+                                <Label fx:id="forecastLabel1" styleClass="forecastLabel" text="2 days ahead"/>
+                            </VBox>
+                            <VBox GridPane.columnIndex="2" alignment="CENTER">
+                                <Label fx:id="forecastLabel2" styleClass="forecastLabel" text="3 days ahead"/>
+                            </VBox>
+                            <VBox GridPane.columnIndex="3" alignment="CENTER">
+                                <Label fx:id="forecastLabel3" styleClass="forecastLabel" text="4 days ahead"/>
+                            </VBox>
+                            <VBox GridPane.columnIndex="4" alignment="CENTER">
+                                <Label fx:id="forecastLabel4" styleClass="forecastLabel" text="5 days ahead"/>
+                            </VBox>
+                        </GridPane>
                     </VBox>
                 </bottom>
             </BorderPane>
