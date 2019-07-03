@@ -80,7 +80,7 @@ public class Connection implements IConnectionListeners {
                     logMessage("Error getting message");
 
                 } catch (IOException ex) {
-                    logMessage("Client exited, terminating");
+                    logMessage("Client exited, thread terminating");
 
                     //Thread termination upon error
                     connectionActive = false;

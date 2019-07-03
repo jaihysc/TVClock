@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 public class ConnectionManager {
@@ -29,7 +31,13 @@ public class ConnectionManager {
                     try {
                         //Constantly accept new connections via the port, then create a connection thread to manage each one
                         Socket socket = serverSocket.accept();
-                        connections.add(new Connection(socket, messageHandler, id++));
+
+                        //Synchronise since this is running async
+                        List<IConnectionListeners> synchronizedConnections = Collections.synchronizedList(connections);
+                        synchronized (synchronizedConnections) {
+                            synchronizedConnections.add(new Connection(socket, messageHandler, id++));
+                        }
+
                         sendMessage("Hey bud"); //TODO, remove, this is for testing
                     } catch (IOException e) {
                         System.out.println("Networking | Error creating connection thread");
@@ -59,11 +67,17 @@ public class ConnectionManager {
      */
     private static void trimConnections() {
         List<IConnectionListeners> newConnections = new ArrayList<>();
-        for (IConnectionListeners connection : connections) {
-            if (connection.isActive())
-                newConnections.add(connection);
-        }
+        List<IConnectionListeners> synchronizedConnections = Collections.synchronizedList(connections);
 
-        connections = newConnections;
+        //Synchronise since startNetworking runs in a thread
+        synchronized (synchronizedConnections) {
+            for (IConnectionListeners connection : synchronizedConnections) {
+                if (connection.isActive())
+                    newConnections.add(connection);
+            }
+
+            synchronizedConnections.clear();
+            synchronizedConnections.addAll(newConnections);
+        }
     }
 }
