@@ -1,74 +1,69 @@
 package networking;
 
-import java.io.BufferedReader;
+import networking.models.IConnectionListeners;
+import networking.models.IMessageReceived;
+
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-
-import com.google.gson.Gson;
-import networking.models.IMessageReceived;
-import networking.models.Packet;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ConnectionManager {
-    private PrintWriter Out;
-    private BufferedReader In;
-    private Gson gson = new Gson(); //For handling json, which is how information will be sent
+    private static long id = 0; //Used to identify each connection
 
-    private boolean ConnectionEstablished;
+    private static List<IConnectionListeners> connections = new ArrayList<>();
 
     /**
-     * Handles transfer of data between this application and a client
+     * Begins handling transfer of data between this application and clients
      * @param portNumber port to listen on
      */
-    public ConnectionManager(int portNumber) {
+    public static void startNetworking(int portNumber, IMessageReceived messageHandler) {
+        System.out.println("Networking | Initializing networking...");
+
         new Thread(() -> {
-            initialize(portNumber);
-        }).start();
-        System.out.println("NETWORKING | Awaiting connection...");
-    }
+            try {
+                ServerSocket serverSocket = new ServerSocket(portNumber);
 
-    private void initialize(int portNumber) {
-        try {
-            ServerSocket serverSocket = new ServerSocket(portNumber);
-            Socket clientSocket = serverSocket.accept();
-            Out = new PrintWriter(clientSocket.getOutputStream(), true);
-            In = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-
-            ConnectionEstablished = true;
-            System.out.println("NETWORKING | Connection established");
-        } catch (IOException e) {
-            System.out.println("NETWORKING | Exception caught when trying to listen on port " + portNumber);
-        }
-    }
-
-    /**
-     * Sends specified message to client
-     * @param string message
-     */
-    public void sendMessage(String string) {
-        Out.println(string);
-    }
-
-    /**
-     * Handles all incoming messages by passing the message to the handler
-     * @param handler Method which implements IMessageReceived
-     */
-    public void handleMessages(IMessageReceived handler) {
-        new Thread(() -> {
-            while (true) {
-                String receivedMessage;
-                try {
-                    if (ConnectionEstablished && (receivedMessage = In.readLine()) != null) {
-                        handler.handleMessage(gson.fromJson(receivedMessage, Packet.class));
+                while (true) {
+                    try {
+                        //Constantly accept new connections via the port, then create a connection thread to manage each one
+                        Socket socket = serverSocket.accept();
+                        connections.add(new Connection(socket, messageHandler, id++));
+                        sendMessage("Hey bud"); //TODO, remove, this is for testing
+                    } catch (IOException e) {
+                        System.out.println("Networking | Error creating connection thread");
                     }
-
-                    Thread.sleep(5000);
-                } catch (Exception ex) {
-                    System.out.println("NETWORKING | Error getting message");
                 }
+            } catch (IOException e) {
+                System.out.println("Networking | Error initializing networking");
             }
         }).start();
+    }
+
+    /**
+     * Sends the specified message to all connected clients
+     * @param message message to send
+     */
+    public static void sendMessage(String message) {
+        trimConnections();
+
+        for (IConnectionListeners connection : connections)
+            connection.sendMessage(message);
+
+        System.out.println("Networking | Sent message: " + message);
+    }
+
+    /**
+     * Removes connections no longer in use
+     */
+    private static void trimConnections() {
+        List<IConnectionListeners> newConnections = new ArrayList<>();
+        for (IConnectionListeners connection : connections) {
+            if (connection.isActive())
+                newConnections.add(connection);
+        }
+
+        connections = newConnections;
     }
 }
