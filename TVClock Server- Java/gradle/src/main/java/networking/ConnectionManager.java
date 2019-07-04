@@ -53,7 +53,7 @@ public class ConnectionManager {
      * Sends the specified message to all connected clients
      * @param message message to send
      */
-    public static void sendMessage(String message) {
+    private static void sendMessage(String message) {
         trimConnections();
 
         for (IConnectionListeners connection : connections)

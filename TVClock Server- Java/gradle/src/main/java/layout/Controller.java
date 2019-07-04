@@ -6,13 +6,19 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.SplitPane;
 import javafx.util.Duration;
+import taskList.TaskListManager;
 import weather.OpenWeatherMapFacade;
 import weather.models.*;
 
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.regex.Pattern;
 
@@ -39,6 +45,9 @@ public class Controller implements Initializable {
     public Label forecastLabel3;
     public Label forecastLabel4;
 
+    public ListView<String> taskList;
+    public SplitPane taskListSplitPane;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         //Clock
@@ -54,9 +63,26 @@ public class Controller implements Initializable {
         updateWeather();
     }
 
-    //Fetch task list information... TODO
+    //Fetch task list information
     private void initializeTaskList() {
+        taskList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
+        Timeline t = new Timeline(new KeyFrame(Duration.ZERO, e -> {
+            taskList.getItems().removeAll();
+
+            List<String> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
+
+            int wrapCharacter = (int) Math.round(taskListSplitPane.getDividerPositions()[0] * 100);
+            //Synchronise since this runs in a thread
+            synchronized (taskListSync) {
+                for (var item : taskListSync) {
+                    taskList.getItems().add(TaskListManager.wrapText(item, wrapCharacter));
+                }
+            }
+        }), new KeyFrame(Duration.minutes(1)));
+
+        t.setCycleCount(Animation.INDEFINITE);
+        t.play();
     }
 
     /**
@@ -104,7 +130,7 @@ public class Controller implements Initializable {
                 return;
             }
 
-            List response = forecastResponse.getList()[0];
+            weather.models.List response = forecastResponse.getList()[0];
 
             Weather weather = response.getWeather()[0];
             weatherDescription.setText(weather.getDescription());
