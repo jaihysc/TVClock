@@ -93,3 +93,10 @@
 .list-cell:even {
     -fx-background-color: #8f8f8f;
 }
+
+/* Bottom progress bar */
+#dayProgressionBar .bar {
+    -fx-padding: 2px;
+    -fx-background-insets: 0;
+    -fx-background-color: orange;
+}

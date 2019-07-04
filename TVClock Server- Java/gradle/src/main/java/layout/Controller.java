@@ -5,10 +5,7 @@ import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.SplitPane;
+import javafx.scene.control.*;
 import javafx.util.Duration;
 import taskList.TaskListManager;
 import weather.OpenWeatherMapFacade;
@@ -48,8 +45,12 @@ public class Controller implements Initializable {
     public ListView<String> taskList;
     public SplitPane taskListSplitPane;
 
+    public ProgressBar dayProgressionBar;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        dayProgressionBar.setProgress(0.25);
+
         //Clock
         updateTime();
 
@@ -61,6 +62,9 @@ public class Controller implements Initializable {
 
         //Forecast
         updateWeather();
+
+        //Schedule bar
+        initializeScheduleBar();
     }
 
     //Fetch task list information
@@ -68,7 +72,8 @@ public class Controller implements Initializable {
         taskList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         Timeline t = new Timeline(new KeyFrame(Duration.ZERO, e -> {
-            taskList.getItems().removeAll();
+            //TOdo, add timed auto remove of tasks
+            taskList.getItems().clear(); //Clear the taskList before adding new items
 
             List<String> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
 
@@ -79,6 +84,24 @@ public class Controller implements Initializable {
                     taskList.getItems().add(TaskListManager.wrapText(item, wrapCharacter));
                 }
             }
+        }), new KeyFrame(Duration.minutes(1)));
+
+        t.setCycleCount(Animation.INDEFINITE);
+        t.play();
+    }
+
+    //Sets the progress of the bottom progress bar based on time of day
+    private void initializeScheduleBar() {
+        Timeline t = new Timeline(new KeyFrame(Duration.ZERO, e -> {
+            //Get the total number of seconds in the current time
+            double val = LocalDateTime.now().getHour() * 60 * 60;
+            val += LocalDateTime.now().getMinute() * 60;
+            val += LocalDateTime.now().getSecond();
+
+            //Normalize seconds to value between 0 - 1
+            double c = val / 86400; //86400 being the number of seconds in a day (24 hours)
+            dayProgressionBar.setProgress(c);
+
         }), new KeyFrame(Duration.minutes(1)));
 
         t.setCycleCount(Animation.INDEFINITE);

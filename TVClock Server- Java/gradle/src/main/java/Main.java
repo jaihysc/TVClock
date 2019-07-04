@@ -14,7 +14,8 @@ public class Main extends Application {
     public void start(Stage primaryStage) throws Exception{
         Parent root = FXMLLoader.load(getClass().getResource("layout/Main.fxml"));
 
-        primaryStage.setTitle("Hello World");
+        primaryStage.setTitle("TVClock Server");
+
 //        primaryStage.initStyle(StageStyle.UNDECORATED); //TODO, uncomment this to remove borders in production
         Scene scene = new Scene(root, 1920, 1080);
         scene.getStylesheets().add("layout/MainStyle.css");

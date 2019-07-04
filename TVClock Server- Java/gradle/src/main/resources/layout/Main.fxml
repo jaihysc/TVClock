@@ -122,10 +122,15 @@
     </top>
 
 
-<!--    TODO bottom bar could have a slider showing progression to the different events-->
+<!--    Schedule bar-->
     <bottom>
-        <Label alignment="CENTER" maxHeight="1.8" maxWidth="1.7976931348623157E308"
-               style="-fx-background-color: linear-gradient(to bottom, paleturquoise, azure, paleturquoise);&#10;"
-               text="Work status (Productivity) (Break)" BorderPane.alignment="CENTER" />
+        <VBox>
+            <Label alignment="CENTER" maxWidth="Infinity"
+                   style="-fx-background-color: brown"
+                   text="Work status (Productivity) (Break)" BorderPane.alignment="CENTER" />
+
+            <!--        bar which shows the progression through the day-->
+            <ProgressBar fx:id="dayProgressionBar" prefWidth="Infinity"/>
+        </VBox>
     </bottom>
 </BorderPane>
