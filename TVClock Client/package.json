@@ -1,0 +1,25 @@
+{
+  "name": "tvclock-client",
+  "version": "1.0.0",
+  "description": "Client application for TVClock",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "cpout": "cp index.html out/",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "npm run cpout && npm run build && electron ./out/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaihysc/TVClock.git"
+  },
+  "author": "jaihysc",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jaihysc/TVClock/issues"
+  },
+  "homepage": "https://github.com/jaihysc/TVClock#readme",
+  "devDependencies": {
+    "electron": "^5.0.6"
+  }
+}
