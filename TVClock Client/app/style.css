@@ -1,0 +1,37 @@
+body {
+    background-color: #1e1e1e !important;
+    color: white !important;
+}
+
+/* Colors */
+.white {
+    color: white;
+}
+
+/* Nav bar*/
+.navbar-item {
+    margin: 0;
+    padding: 0;
+    font-size: 18px;
+}
+
+
+/* Status bar */
+#status-bar {
+    background-color: #68217a;
+    color: white;
+}
+
+#connection-status {
+    margin-left: 6px;
+}
+
+.status-bar-text {
+    margin-bottom: 0;
+}
+
+.status-bar-btn {
+    padding-left: 6px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}

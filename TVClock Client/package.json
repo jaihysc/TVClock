@@ -2,12 +2,11 @@
   "name": "tvclock-client",
   "version": "1.0.0",
   "description": "Client application for TVClock",
-  "main": "index.ts",
+  "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "cpout": "cp index.html out/",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "npm run cpout && npm run build && electron ./out/main.js"
+    "start": "npm run build && electron app/main.js"
   },
   "repository": {
     "type": "git",
@@ -21,5 +20,11 @@
   "homepage": "https://github.com/jaihysc/TVClock#readme",
   "devDependencies": {
     "electron": "^5.0.6"
+  },
+  "dependencies": {
+    "@types/jquery": "^3.3.30",
+    "bootstrap": "^4.3.1",
+    "jquery": "^3.4.1",
+    "popper.js": "^1.15.0"
   }
 }
