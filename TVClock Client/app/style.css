@@ -51,6 +51,12 @@ body {
     margin-bottom: -8px;
 }
 
-#todo-task-manager-container {
+.view-sticky-container {
     padding-top: 68px;
+}
+
+/* Schedule */
+.list-time-item {
+    /*margin: 0;*/
+    /*padding: 2px;*/
 }
