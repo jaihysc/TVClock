@@ -1,3 +1,4 @@
+//Renderer
 //Manages the switching between the different views (todos, schedule, settings)
 
 //Fetch the buttonContainers

@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from "electron";
+import { ipcMain } from "electron";
 let mainWindow: BrowserWindow;
 
 async function createWindow() {
@@ -25,6 +26,9 @@ async function createWindow() {
         //TODO, fix this later
         // mainWindow = null;
     });
+
+    //Setup networking
+    initNetworking();
 }
 
 // electron has finished initialization
@@ -48,6 +52,52 @@ app.on("activate", async () => {
         await createWindow();
     }
 });
+
+//Networking
+let net = require("net");
+let networkClient = new net.Socket();
+
+//Networking settings
+let hostname = "localhost";
+let port = 4999;
+
+function initNetworking() {
+    ipcMain.on("networking-reconnect", (event: any, arg: string) => {
+        console.log("Networking | Attempting to reconnect");
+        networkConnect();
+    });
+
+    networkClient.on("data", function(data: Buffer) {
+        console.log("Received: " + data);
+    });
+
+    networkClient.on("close", function() {
+        mainWindow.webContents.send("networking-status", "disconnected");
+        console.log("Networking | Connection closed");
+    });
+
+    networkClient.on("error", (error: string) => {
+        console.log("Networking | " + error);
+        mainWindow.webContents.send("networking-status", "disconnected");
+    });
+
+    //Start networking
+    networkConnect();
+}
+
+function networkConnect() {
+    mainWindow.webContents.send("networking-status", "connecting");
+    console.log("Networking | Connecting");
+    //Attempt to establish connection on specified port
+    networkClient.connect(port, hostname, () => {
+        //connection established
+        mainWindow.webContents.send("networking-status", "connected");
+
+        console.log("Networking | Connection established");
+    });
+}
+
+
 
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.

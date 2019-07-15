@@ -1,3 +1,3 @@
 //Items involving the DOM is performed in renderer
-require("./networkManager.js");
+require("./statusBarManager.js");
 require("./viewManager.js");

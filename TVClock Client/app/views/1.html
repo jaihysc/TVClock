@@ -11,19 +11,9 @@
 
 <div class="row">
     <div class="col-6">
-        <ul class="list-group">
-            <li class="list-group-item-darker list-group-flush list-time-item">
-                <div class="row">
-                    <div class="col-2">
-                        <p class="">1 AM</p>
-                    </div>
-                    <div class="col-10">
-                        <p class="">Plant tomato trees</p>
-                    </div>
-                </div>
-            </li>
+        <ul class="list-group" id="view-schedule-timetable">
+            <!--Schedule items will be injected here-->
         </ul>
-
 
         <!--Bottom whitespace to account for bottom status bar-->
         <br>
@@ -32,36 +22,35 @@
     </div>
     <div class="col-6">
         <div class="container-fluid sticky-top view-sticky-container">
-            <div class="form-group">
-                <textarea class="form-control" id="new-task" rows="2" placeholder="New task"></textarea>
+            <div>
+                <ul class="list-group">
+                    <!--Sample data-->
+                    <li class="list-group-item-darker list-group-flush">Work</li>
+                    <li class="list-group-item-darker list-group-flush">Break</li>
+
+                </ul>
             </div>
-            <div class="row">
-                <div class="col-6">
-                    <div class="form-group" >
-                        <label for="task-start-date" class="col-form-label">Start date</label>
-                        <input type="text" class="form-control" id="task-start-date" placeholder="">
-                    </div>
+            <br>
+            <br>
+            <br>
+            <div>
+                <div class="form-group">
+                    <textarea class="form-control" id="new-task" rows="1" placeholder="New period"></textarea>
                 </div>
-                <div class="col-6">
-                    <div class="form-group">
-                        <label for="task-end-date" class="col-form-label">End date</label>
-                        <input type="text" class="form-control" id="task-end-date" placeholder="">
+
+                <div class="row">
+                    <div class="col-4">
+                        <button type="submit" class="btn btn-primary">Add period</button>
+                    </div>
+                    <div class="col-4">
+                        <button type="submit" class="btn btn-warning">Edit period</button>
+                    </div>
+                    <div class="col-4">
+                        <button type="submit" class="btn btn-danger">Remove period</button>
                     </div>
                 </div>
             </div>
 
-            <br>
-            <div class="row">
-                <div class="col-4">
-                    <button type="submit" class="btn btn-primary">Add task</button>
-                </div>
-                <div class="col-4">
-                    <button type="submit" class="btn btn-warning">Edit task</button>
-                </div>
-                <div class="col-4">
-                    <button type="submit" class="btn btn-danger">Remove task</button>
-                </div>
-            </div>
         </div>
     </div>
 </div>

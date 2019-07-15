@@ -37,6 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 var _this = this;
 Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
+var electron_2 = require("electron");
 var mainWindow;
 function createWindow() {
     return __awaiter(this, void 0, void 0, function () {
@@ -64,6 +65,8 @@ function createWindow() {
                         //TODO, fix this later
                         // mainWindow = null;
                     });
+                    //Setup networking
+                    initNetworking();
                     return [2 /*return*/];
             }
         });
@@ -94,5 +97,40 @@ electron_1.app.on("activate", function () { return __awaiter(_this, void 0, void
         }
     });
 }); });
+//Networking
+var net = require("net");
+var networkClient = new net.Socket();
+//Networking settings
+var hostname = "localhost";
+var port = 4999;
+function initNetworking() {
+    electron_2.ipcMain.on("networking-reconnect", function (event, arg) {
+        console.log("Networking | Attempting to reconnect");
+        networkConnect();
+    });
+    networkClient.on("data", function (data) {
+        console.log("Received: " + data);
+    });
+    networkClient.on("close", function () {
+        mainWindow.webContents.send("networking-status", "disconnected");
+        console.log("Networking | Connection closed");
+    });
+    networkClient.on("error", function (error) {
+        console.log("Networking | " + error);
+        mainWindow.webContents.send("networking-status", "disconnected");
+    });
+    //Start networking
+    networkConnect();
+}
+function networkConnect() {
+    mainWindow.webContents.send("networking-status", "connecting");
+    console.log("Networking | Connecting");
+    //Attempt to establish connection on specified port
+    networkClient.connect(port, hostname, function () {
+        //connection established
+        mainWindow.webContents.send("networking-status", "connected");
+        console.log("Networking | Connection established");
+    });
+}
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.

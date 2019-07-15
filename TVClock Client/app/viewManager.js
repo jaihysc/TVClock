@@ -1,4 +1,5 @@
 "use strict";
+//Renderer
 //Manages the switching between the different views (todos, schedule, settings)
 //Fetch the buttonContainers
 var buttonContainers = $(".nav-item");
