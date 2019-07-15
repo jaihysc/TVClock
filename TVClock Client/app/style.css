@@ -35,3 +35,22 @@ body {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
 }
+
+/* Task list */
+.list-group-item-darker {
+    position: relative;
+    display: block;
+    padding: .75rem 1.25rem;
+    margin-bottom: -1px;
+    background-color: #464646;
+    border: 2px solid rgba(255, 255, 255,.125);
+}
+
+.list-item-description {
+    font-size: 12px;
+    margin-bottom: -8px;
+}
+
+#todo-task-manager-container {
+    padding-top: 68px;
+}

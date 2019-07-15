@@ -19,10 +19,11 @@ for (var i = 0; i < buttonContainers.length; ++i) {
 }
 //Hold all the views for each button of navbar in order
 var views = [];
+var viewPath = "./app/views/";
 var fs = require("fs");
-var files = fs.readdirSync("./app/views/");
+var files = fs.readdirSync(viewPath);
 var _loop_2 = function (i) {
-    fs.readFile("./app/views/" + files[i], "utf8", function (err, contents) {
+    fs.readFile(viewPath + files[i], "utf8", function (err, contents) {
         //Loads the default view 0
         if (i === 0) {
             $("#view-container").html(contents);

@@ -22,10 +22,12 @@ for (let i = 0; i < buttonContainers.length; ++i) {
 //Hold all the views for each button of navbar in order
 let views: string[] = [];
 
+const viewPath = "./app/views/";
+
 let fs = require("fs");
-let files = fs.readdirSync("./app/views/");
+let files = fs.readdirSync(viewPath);
 for (let i = 0; i < files.length; ++i) {
-    fs.readFile("./app/views/" + files[i], "utf8", (err: null, contents: string) => {
+    fs.readFile(viewPath + files[i], "utf8", (err: null, contents: string) => {
         //Loads the default view 0
         if (i === 0) {
             $("#view-container").html(contents);

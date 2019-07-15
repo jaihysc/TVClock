@@ -1,2 +1,74 @@
-<!--Todos-->
-Todos view
+<br>
+<div class="row">
+    <div class="col-6">
+        <h3 class="text-center">Active tasks</h3>
+    </div>
+    <div class="col-6">
+        <h3 class="text-center">Task manager</h3>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-6">
+        <div class="container-fluid">
+            <ul class="list-group">
+                <!--Sample data-->
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+                <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
+            </ul>
+        </div>
+
+        <!--Bottom whitespace to account for bottom status bar-->
+        <br>
+        <br>
+        <br>
+    </div>
+    <div class="col-6">
+        <div class="container-fluid sticky-top" id="todo-task-manager-container">
+            <div class="form-group">
+                <textarea class="form-control" id="new-task" rows="2" placeholder="New task"></textarea>
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    <div class="form-group" >
+                        <label for="task-start-date" class="col-form-label">Start date</label>
+                        <input type="text" class="form-control" id="task-start-date" placeholder="">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="task-end-date" class="col-form-label">End date</label>
+                        <input type="text" class="form-control" id="task-end-date" placeholder="">
+                    </div>
+                </div>
+            </div>
+
+            <br>
+            <div class="row">
+                <div class="col-4">
+                    <button type="submit" class="btn btn-primary">Add task</button>
+                </div>
+                <div class="col-4">
+                    <button type="submit" class="btn btn-warning">Edit task</button>
+                </div>
+                <div class="col-4">
+                    <button type="submit" class="btn btn-danger">Remove task</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
