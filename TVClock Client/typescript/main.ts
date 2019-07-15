@@ -1,6 +1,11 @@
 import { app, BrowserWindow } from "electron";
 import { ipcMain } from "electron";
+
 let mainWindow: BrowserWindow;
+
+//Networking
+let net = require("net");
+let networkClient = new net.Socket();
 
 async function createWindow() {
     mainWindow = new BrowserWindow({
@@ -19,12 +24,17 @@ async function createWindow() {
 
     // Window close
     mainWindow.on("closed", () => {
+        console.log("Program exiting...");
+
         // Dereference the window object, usually you would store windows
         // in an array if your app supports multi windows, this is the time
         // when you should delete the corresponding element.
+        mainWindow.destroy();
 
-        //TODO, fix this later
-        // mainWindow = null;
+        //Close networking connections
+        networkClient.end();
+
+        console.log("Goodbye!");
     });
 
     //Setup networking
@@ -53,11 +63,8 @@ app.on("activate", async () => {
     }
 });
 
-//Networking
-let net = require("net");
-let networkClient = new net.Socket();
-
 //Networking settings
+//todo make these settings configurable
 let hostname = "localhost";
 let port = 4999;
 
@@ -68,7 +75,7 @@ function initNetworking() {
     });
 
     networkClient.on("data", function(data: Buffer) {
-        console.log("Received: " + data);
+        console.log("Networking | Received: " + data);
     });
 
     networkClient.on("close", function() {

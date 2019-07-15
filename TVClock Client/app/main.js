@@ -39,6 +39,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
 var electron_2 = require("electron");
 var mainWindow;
+//Networking
+var net = require("net");
+var networkClient = new net.Socket();
 function createWindow() {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
@@ -59,11 +62,14 @@ function createWindow() {
                     mainWindow.webContents.openDevTools();
                     // Window close
                     mainWindow.on("closed", function () {
+                        console.log("Program exiting...");
                         // Dereference the window object, usually you would store windows
                         // in an array if your app supports multi windows, this is the time
                         // when you should delete the corresponding element.
-                        //TODO, fix this later
-                        // mainWindow = null;
+                        mainWindow.destroy();
+                        //Close networking connections
+                        networkClient.end();
+                        console.log("Goodbye!");
                     });
                     //Setup networking
                     initNetworking();
@@ -97,10 +103,8 @@ electron_1.app.on("activate", function () { return __awaiter(_this, void 0, void
         }
     });
 }); });
-//Networking
-var net = require("net");
-var networkClient = new net.Socket();
 //Networking settings
+//todo make these settings configurable
 var hostname = "localhost";
 var port = 4999;
 function initNetworking() {
@@ -109,7 +113,7 @@ function initNetworking() {
         networkConnect();
     });
     networkClient.on("data", function (data) {
-        console.log("Received: " + data);
+        console.log("Networking | Received: " + data);
     });
     networkClient.on("close", function () {
         mainWindow.webContents.send("networking-status", "disconnected");

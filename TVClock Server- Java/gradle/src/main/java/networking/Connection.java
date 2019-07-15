@@ -73,6 +73,12 @@ public class Connection implements IConnectionListeners {
                         } catch (Exception e) {
                             logMessage("Error occurred handling received message");
                         }
+                    } else {
+                        //Also terminate the thread if the received message is a null, which is assumed to be that the
+                        //Initiator closed
+                        logMessage("Client connection closed, thread terminating");
+                        connectionActive = false;
+                        break;
                     }
 
                     Thread.sleep(5000);
@@ -80,8 +86,7 @@ public class Connection implements IConnectionListeners {
                     logMessage("Error getting message");
 
                 } catch (IOException ex) {
-                    logMessage("Client exited, thread terminating");
-
+                    logMessage("Client connection IOException, thread terminating");
                     //Thread termination upon error
                     connectionActive = false;
                     break;
