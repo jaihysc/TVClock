@@ -1,6 +1,7 @@
 //Renderer
 
 import { ipcRenderer } from "electron";
+import {start} from "repl";
 
 let taskList = $("#active-tasks-list");
 let tasks: task[] = []; //Collection of tasks
@@ -35,6 +36,15 @@ if (fetchedFromServer) {
 //Updates the appearance of the task list with the data from tasks
 updateTaskList();
 
+//Task manager buttons
+let addTaskBtn = $("#add-task-btn");
+let editTaskBtn = $("#edit-task-btn");
+let removeTaskBtn = $("#remove-task-btn");
+
+//Hide edit and remove buttons by default
+editTaskBtn.hide();
+removeTaskBtn.hide();
+
 function updateTaskList() {
     taskList.html(""); //Clear old contents first
     for (let i = 0; i < tasks.length; ++i) {
@@ -59,6 +69,10 @@ function updateTaskList() {
             selectedTaskIndex = i;
             taskListItems[i].classList.add("active", "list-group-item");
             taskListItems[i].classList.remove("list-group-item-darker");
+
+            //Handle visibility of edit and remove buttons
+            editTaskBtn.show();
+            removeTaskBtn.show();
         })
     }
 
@@ -69,13 +83,11 @@ function updateTaskList() {
 }
 
 //Adding a task to active tasks with task manager
-let addTaskBtn = $("#add-task-btn");
-let editTaskBtn = $("#edit-task-btn");
-let removeTaskBtn = $("#remove-task-btn");
-
 let newTaskText = $("#new-task-text");
 let newTaskStartDate = $("#new-task-start-date");
 let newTaskEndDate = $("#new-task-end-date");
+
+let taskErrorText = $("#new-task-text-error");
 
 //Set placeholder start date to current time, and end date to 2 days in the future
 let currentDate = new Date();
@@ -85,16 +97,30 @@ currentDate.setDate(currentDate.getDate()+2); //add 2 days for the future end da
 newTaskStartDate.attr("placeholder", currentDateString);
 newTaskEndDate.attr("placeholder", currentDate.toDateString());
 
+taskErrorText.hide(); //Hide error text by default
+
 //Add button click, gather information from text fields and add to task list array
 addTaskBtn.on("click", () => {
-    //Todo add, if date boxes empty, use placeholder date
-    tasks.push(
-        new task(String(
-            newTaskText.val()),
-            new Date(String(newTaskStartDate.val())),
-            new Date(String(newTaskEndDate.val()))
-        )
-    );
+    let taskText = String(newTaskText.val());
+    let startDate = String(newTaskStartDate.val());
+    let endDate = String(newTaskEndDate.val());
+
+    //Show error text if task does not have a name
+    if (taskText == "") {
+        taskErrorText.show();
+        return;
+    }
+    taskErrorText.hide();
+
+    //If date boxes are empty, use placeholder date
+    if (startDate == "") {
+        startDate = String(newTaskStartDate.attr("placeholder"));
+    }
+    if (endDate == "") {
+        endDate = String(newTaskEndDate.attr("placeholder"));
+    }
+
+    tasks.push(new task(taskText, new Date(startDate), new Date(endDate)));
 
     //Clear input boxes
     newTaskText.val("");
@@ -104,5 +130,3 @@ addTaskBtn.on("click", () => {
     //Refresh task list to include changes
     updateTaskList();
 });
-
-//Handle visibility of edit and remove buttons

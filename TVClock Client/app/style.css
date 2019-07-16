@@ -37,6 +37,10 @@ body {
 }
 
 /* Task list */
+.form-invalid {
+    color: #ef3548;
+}
+
 .list-group-item-darker {
     position: relative;
     display: block;
