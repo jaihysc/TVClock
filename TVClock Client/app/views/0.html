@@ -1,3 +1,5 @@
+<!--js=todoManager.js-->
+
 <br>
 <div class="row">
     <div class="col-6">
@@ -11,8 +13,8 @@
 <div class="row">
     <div class="col-6">
         <div class="container-fluid">
-            <ul class="list-group">
-                <!--Sample data-->
+            <ul class="list-group" id="active-tasks-list">
+                <!--Active tasks will be injected here-->
                 <li class="list-group-item-darker list-group-flush">Cras justo odio<p class="list-item-description">Start date - End date</p></li>
             </ul>
         </div>
@@ -25,19 +27,19 @@
     <div class="col-6">
         <div class="container-fluid sticky-top view-sticky-container">
             <div class="form-group">
-                <textarea class="form-control" id="new-task" rows="2" placeholder="New task"></textarea>
+                <textarea class="form-control" id="new-task-text" rows="2" placeholder="New task"></textarea>
             </div>
             <div class="row">
                 <div class="col-6">
                     <div class="form-group" >
-                        <label for="task-start-date" class="col-form-label">Start date</label>
-                        <input type="text" class="form-control" id="task-start-date" placeholder="">
+                        <label for="new-task-start-date" class="col-form-label">Start date</label>
+                        <input type="text" class="form-control" id="new-task-start-date" placeholder="">
                     </div>
                 </div>
                 <div class="col-6">
                     <div class="form-group">
-                        <label for="task-end-date" class="col-form-label">End date</label>
-                        <input type="text" class="form-control" id="task-end-date" placeholder="">
+                        <label for="new-task-end-date" class="col-form-label">End date</label>
+                        <input type="text" class="form-control" id="new-task-end-date" placeholder="">
                     </div>
                 </div>
             </div>
@@ -45,13 +47,13 @@
             <br>
             <div class="row">
                 <div class="col-4">
-                    <button type="submit" class="btn btn-primary">Add task</button>
+                    <button type="submit" class="btn btn-primary" id="add-task-btn">Add task</button>
                 </div>
                 <div class="col-4">
-                    <button type="submit" class="btn btn-warning">Edit task</button>
+                    <button type="submit" class="btn btn-warning" id="edit-task-btn">Edit task</button>
                 </div>
                 <div class="col-4">
-                    <button type="submit" class="btn btn-danger">Remove task</button>
+                    <button type="submit" class="btn btn-danger" id="remove-task-btn">Remove task</button>
                 </div>
             </div>
         </div>

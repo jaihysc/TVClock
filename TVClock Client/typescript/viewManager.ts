@@ -3,18 +3,18 @@
 
 //Fetch the buttonContainers
 let buttonContainers = $( ".nav-item" );
-let lastButton = buttonContainers[0];
+let lastButton = buttonContainers[1];
 
 //Add listeners on all the buttonContainers to load their corresponding view
 for (let i = 0; i < buttonContainers.length; ++i) {
     buttonContainers[i].addEventListener("click", () =>
     {
-        //Make active
-        buttonContainers[i].classList.add("active");
-
         //Make last button inactive
         lastButton.classList.remove("active");
         lastButton = buttonContainers[i];
+
+        //Make current button active
+        buttonContainers[i].classList.add("active");
 
         loadView(i);
     });
@@ -35,30 +35,29 @@ files.sort();
 const viewManagerDeclarationText = "<!--js=";
 
 for (let i = 0; i < files.length; ++i) {
-    fs.readFile(viewPath + files[i], "utf8", (err: null, contents: string) => {
-        //Parse the first line of a view file for the text <!--js=
-        //Example: <!--js=test.js-->
-        if (contents.startsWith(viewManagerDeclarationText)) {
-            let firstLineLength = viewManagerDeclarationText.length;
-            //Get length of first line
-            while (firstLineLength < contents.length && contents[firstLineLength] != '\n')
-                ++firstLineLength;
+    let contents = fs.readFileSync(viewPath + files[i]).toString();
 
-            //Get name to a .js file which will be executed when the view is called
-            //Ignore --> at end of comment
-            viewJs.push(contents.substring(viewManagerDeclarationText.length, firstLineLength-3));
-        } else
-            viewJs.push("-"); //Push undefined character
+    //Parse the first line of a view file for the text <!--js=
+    //Example: <!--js=test.js-->
+    if (contents.startsWith(viewManagerDeclarationText)) {
+        let firstLineLength = viewManagerDeclarationText.length;
+        //Get length of first line
+        while (firstLineLength < contents.length && contents[firstLineLength] != '\n')
+            ++firstLineLength;
 
-        //Loads the default view 0 upon project start
-        if (i === 0) {
-            $("#view-container").html(contents);
-        }
+        //Get name to a .js file which will be executed when the view is called
+        //Ignore --> at end of comment
+        viewJs.push(contents.substring(viewManagerDeclarationText.length, firstLineLength-3));
+    } else
+        viewJs.push("-"); //Push undefined character
 
-        //Store the html file
-        views.push(contents)
-    });
+    //Store the html file
+    views.push(contents)
 }
+
+//Open the default page
+buttonContainers[0].click();
+
 
 function loadView(viewIndex: number) {
     //Inject view html into index.html #view-container
