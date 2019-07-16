@@ -1,7 +1,6 @@
 //Renderer
 
 import { ipcRenderer } from "electron";
-import {start} from "repl";
 
 let taskList = $("#active-tasks-list");
 let tasks: task[] = []; //Collection of tasks
@@ -24,17 +23,20 @@ class task {
 //TODO Send sync request to server
 //Networking sync active tasks
 
-let fetchedFromServer = false; //Only fetch once, and await syncs afterwards
+let fetchedFromServer = true; //Only fetch once, and await syncs afterwards
 
+const tasksIdentifier = "todo-view-tasks"; //Identifier for tasks in persistence storage
 if (fetchedFromServer) {
-    ipcRenderer.send("data-retrieve", "todo-view-tasks");
+    ipcRenderer.send("data-retrieve", tasksIdentifier);
     ipcRenderer.once("data-retrieve-response", (event: any, data: task[]) => {
-        tasks = data;
-    })
-}
+        if (data == undefined)
+            return;
 
-//Updates the appearance of the task list with the data from tasks
-updateTaskList();
+        for (let i = 0; i < data.length; ++i) {
+            tasks.push(new task(data[i].text, data[i].startDate, data[i].endDate));
+        }
+    });
+}
 
 //Task manager buttons
 let addTaskBtn = $("#add-task-btn");
@@ -44,43 +46,6 @@ let removeTaskBtn = $("#remove-task-btn");
 //Hide edit and remove buttons by default
 editTaskBtn.hide();
 removeTaskBtn.hide();
-
-function updateTaskList() {
-    taskList.html(""); //Clear old contents first
-    for (let i = 0; i < tasks.length; ++i) {
-        //Inject each task into the html
-        taskList.append(" <li class=\"list-group-item-darker list-group-flush task-list-item\">" + tasks[i].text +
-            "<p class=\"list-item-description\">" + tasks[i].startDate + " - " + tasks[i].endDate +
-            "</p></li>");
-    }
-
-    //Create event handlers for each task so it can be set active
-    let taskListItems = $(".task-list-item");
-    for (let i = 0; i < taskListItems.length; ++i) {
-        taskListItems[i].addEventListener("click", () => {
-            //Set clicked button as active
-            //The class list-group-item is added as active only shows up with list-group-item
-            //Removing the custom class list-group-item-darker
-            if (selectedTaskIndex >= 0) {
-                taskListItems[selectedTaskIndex].classList.remove("active", "list-group-item");
-                taskListItems[selectedTaskIndex].classList.add("list-group-item-darker");
-            }
-
-            selectedTaskIndex = i;
-            taskListItems[i].classList.add("active", "list-group-item");
-            taskListItems[i].classList.remove("list-group-item-darker");
-
-            //Handle visibility of edit and remove buttons
-            editTaskBtn.show();
-            removeTaskBtn.show();
-        })
-    }
-
-    //Preselect an item based on the selectedTaskIndex
-    if (selectedTaskIndex >= 0) {
-        taskListItems[selectedTaskIndex].click();
-    }
-}
 
 //Adding a task to active tasks with task manager
 let newTaskText = $("#new-task-text");
@@ -128,5 +93,53 @@ addTaskBtn.on("click", () => {
     newTaskEndDate.val("");
 
     //Refresh task list to include changes
+    updateTaskList();
+});
+
+//Injects html into the list for elements to appear on screen, saves task data to persistent
+function updateTaskList() {
+    taskList.html(""); //Clear old contents first
+
+    for (let i = 0; i < tasks.length; ++i) {
+        //Inject each task into the html
+        taskList.append(" <li class=\"list-group-item-darker list-group-flush task-list-item\">" + tasks[i].text +
+            "<p class=\"list-item-description\">" + tasks[i].startDate + " - " + tasks[i].endDate +
+            "</p></li>");
+    }
+
+    //Create event handlers for each task so it can be set active
+    let taskListItems = $(".task-list-item");
+    for (let i = 0; i < taskListItems.length; ++i) {
+        taskListItems[i].addEventListener("click", () => {
+            //Set clicked button as active
+            //The class list-group-item is added as active only shows up with list-group-item
+            //Removing the custom class list-group-item-darker
+            if (selectedTaskIndex >= 0) {
+                taskListItems[selectedTaskIndex].classList.remove("active", "list-group-item");
+                taskListItems[selectedTaskIndex].classList.add("list-group-item-darker");
+            }
+
+            selectedTaskIndex = i;
+            taskListItems[i].classList.add("active", "list-group-item");
+            taskListItems[i].classList.remove("list-group-item-darker");
+
+            //Handle visibility of edit and remove buttons
+            editTaskBtn.show();
+            removeTaskBtn.show();
+        })
+    }
+
+    //Preselect an item based on the selectedTaskIndex
+    if (selectedTaskIndex >= 0) {
+        taskListItems[selectedTaskIndex].click();
+    }
+
+    //Save task data to persistent
+    ipcRenderer.send("data-save", {identifier: tasksIdentifier, data: tasks});
+}
+
+//Wait until the document is ready before running default actions
+$(function() {
+    //Updates the appearance of the task list with the data from tasks
     updateTaskList();
 });

@@ -16,14 +16,23 @@ class dataNode {
 //Binary search for adding and retrieving data
 let headNode: dataNode = new dataNode();
 
-ipcMain.on("data-store", (event: any, arg: any) => {
-    dataAdd(arg, arg);
+ipcMain.on("data-save", (event: any, arg: { identifier: string; data: any; }) => {
+    dataAdd(arg.identifier, arg.data);
 });
 
 ipcMain.on("data-retrieve", (event: any, identifier: string) => {
     let foundNode = binaryNodeSearch(headNode, identifier);
-    if (foundNode == undefined)
+
+    //Send back an undefined response if it failed to find a node
+    if (foundNode == undefined) {
+        event.reply("data-retrieve-response", undefined);
         return;
+    }
+
+    if (foundNode.identifier != identifier) {
+        event.reply("data-retrieve-response", undefined);
+        return;
+    }
 
     event.reply("data-retrieve-response", foundNode.data);
 });
@@ -31,21 +40,17 @@ ipcMain.on("data-retrieve", (event: any, identifier: string) => {
 //Searches for the identifier Returns null if there is no match
 function dataAdd(identifier: string, data: any) {
     let foundNode = binaryNodeSearch(headNode, identifier);
-    foundNode = new dataNode();
-    foundNode.identifier = identifier;
-    foundNode.data = data;
+    if (foundNode != undefined) {
+        foundNode.identifier = identifier;
+        foundNode.data = data;
+    }
 }
 
 //Returns an  dataNode in the binary tree using the identifier, undefined if it does not exist
 function binaryNodeSearch(node: dataNode, identifier: string) {
     //if node does not have values, return it
-    if (node.identifier == "") {
+    if (node.identifier == "" || node.identifier == identifier) {
         return node;
-    }
-
-    if (node.identifier == identifier) {
-        console.log("Data Persistence | Identifier already exists");
-        return;
     }
 
     //left
@@ -54,6 +59,7 @@ function binaryNodeSearch(node: dataNode, identifier: string) {
         if (node.left != undefined) {
             binaryNodeSearch(node.left, identifier);
         } else {
+            node.left = new dataNode();
             return node.left;
         }
     } else {
@@ -61,6 +67,7 @@ function binaryNodeSearch(node: dataNode, identifier: string) {
         if (node.right != undefined) {
             binaryNodeSearch(node.right, identifier);
         } else {
+            node.right = new dataNode();
             return node.right;
         }
     }
