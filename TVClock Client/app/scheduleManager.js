@@ -1,4 +1,5 @@
 "use strict";
+//Renderer
 //Generate time list
 var timetable = $("#view-schedule-timetable");
 //AM

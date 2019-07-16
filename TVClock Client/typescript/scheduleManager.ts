@@ -1,3 +1,5 @@
+//Renderer
+
 //Generate time list
 let timetable = $("#view-schedule-timetable");
 //AM

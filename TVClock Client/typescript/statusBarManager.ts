@@ -1,13 +1,10 @@
 //Renderer
 
-//Networking button and text
-import * as electron from "electron";
+import { ipcRenderer } from "electron"; //Used to send data to main
 
+//Networking button and text
 let connectionRefreshButton = document.getElementById("connection-refresh");
 let connectionStatusText = document.getElementById("connection-status");
-
-//Used to send data to main
-const ipcRenderer = electron.ipcRenderer;
 
 //Handle connection bar refresh button clicks
 if (connectionRefreshButton != null) {
@@ -24,6 +21,7 @@ ipcRenderer.on("networking-status", (event: any, data: string) => {
         switch (data) {
             case "connecting":
                 connectionStatusText.innerHTML = "Connecting...";
+                connectionStatusText.style.color = "white";
                 break;
             case "connected":
                 connectionStatusText.innerHTML = "Connected";

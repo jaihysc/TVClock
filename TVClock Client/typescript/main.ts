@@ -32,7 +32,7 @@ async function createWindow() {
         mainWindow.destroy();
 
         //Close networking connections
-        networkClient.end();
+        networkDisconnect();
 
         console.log("Goodbye!");
     });
@@ -64,16 +64,14 @@ app.on("activate", async () => {
 });
 
 //Networking settings
-//todo make these settings configurable
-let hostname = "localhost";
-let port = 4999;
+class networkingConfig {
+    hostname: string = "localhost";
+    port: number = 4999;
+}
+
+let networkConfig = new networkingConfig();
 
 function initNetworking() {
-    ipcMain.on("networking-reconnect", (event: any, arg: string) => {
-        console.log("Networking | Attempting to reconnect");
-        networkConnect();
-    });
-
     networkClient.on("data", function(data: Buffer) {
         console.log("Networking | Received: " + data);
     });
@@ -90,13 +88,38 @@ function initNetworking() {
 
     //Start networking
     networkConnect();
+
+    //Event handlers for reconnect and send from renderer process
+    ipcMain.on("networking-reconnect", (event: any, arg: string) => {
+        console.log("Networking | Attempting to reconnect");
+        networkConnect();
+    });
+    ipcMain.on("networking-send", (event: any, arg: string) => {
+        console.log("Networking | Sent: "+ arg);
+        networkSend(arg);
+    });
+
+    //Allow for changing of port + hostname
+    ipcMain.on("networking-info-modify", (event: any, arg: networkingConfig) => {
+        //Should receive hostname + port
+        networkConfig = arg;
+        //Reconnect with new settings
+        networkDisconnect();
+        networkConnect();
+    })
+}
+
+function networkDisconnect() {
+    console.log("Networking | Disconnecting");
+    networkClient.end();
 }
 
 function networkConnect() {
     mainWindow.webContents.send("networking-status", "connecting");
     console.log("Networking | Connecting");
+
     //Attempt to establish connection on specified port
-    networkClient.connect(port, hostname, () => {
+    networkClient.connect(networkConfig.port, networkConfig.hostname, () => {
         //connection established
         mainWindow.webContents.send("networking-status", "connected");
 
@@ -104,6 +127,9 @@ function networkConnect() {
     });
 }
 
+function networkSend(str: string) {
+    networkClient.write(str + "\r\n"); //Make sure to include \r\n so the server recognises it as a message
+}
 
 
 // In this file you can include the rest of your app"s specific main process

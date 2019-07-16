@@ -68,7 +68,7 @@ function createWindow() {
                         // when you should delete the corresponding element.
                         mainWindow.destroy();
                         //Close networking connections
-                        networkClient.end();
+                        networkDisconnect();
                         console.log("Goodbye!");
                     });
                     //Setup networking
@@ -104,14 +104,15 @@ electron_1.app.on("activate", function () { return __awaiter(_this, void 0, void
     });
 }); });
 //Networking settings
-//todo make these settings configurable
-var hostname = "localhost";
-var port = 4999;
+var networkingConfig = /** @class */ (function () {
+    function networkingConfig() {
+        this.hostname = "localhost";
+        this.port = 4999;
+    }
+    return networkingConfig;
+}());
+var networkConfig = new networkingConfig();
 function initNetworking() {
-    electron_2.ipcMain.on("networking-reconnect", function (event, arg) {
-        console.log("Networking | Attempting to reconnect");
-        networkConnect();
-    });
     networkClient.on("data", function (data) {
         console.log("Networking | Received: " + data);
     });
@@ -125,16 +126,40 @@ function initNetworking() {
     });
     //Start networking
     networkConnect();
+    //Event handlers for reconnect and send from renderer process
+    electron_2.ipcMain.on("networking-reconnect", function (event, arg) {
+        console.log("Networking | Attempting to reconnect");
+        networkConnect();
+    });
+    electron_2.ipcMain.on("networking-send", function (event, arg) {
+        console.log("Networking | Sent: " + arg);
+        networkSend(arg);
+    });
+    //Allow for changing of port + hostname
+    electron_2.ipcMain.on("networking-info-modify", function (event, arg) {
+        //Should receive hostname + port
+        networkConfig = arg;
+        //Reconnect with new settings
+        networkDisconnect();
+        networkConnect();
+    });
+}
+function networkDisconnect() {
+    console.log("Networking | Disconnecting");
+    networkClient.end();
 }
 function networkConnect() {
     mainWindow.webContents.send("networking-status", "connecting");
     console.log("Networking | Connecting");
     //Attempt to establish connection on specified port
-    networkClient.connect(port, hostname, function () {
+    networkClient.connect(networkConfig.port, networkConfig.hostname, function () {
         //connection established
         mainWindow.webContents.send("networking-status", "connected");
         console.log("Networking | Connection established");
     });
+}
+function networkSend(str) {
+    networkClient.write(str + "\r\n"); //Make sure to include \r\n so the server recognises it as a message
 }
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
