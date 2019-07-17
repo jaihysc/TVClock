@@ -1,58 +1,57 @@
 <!--js=scheduleManager.js-->
 
-<br>
-<div class="row">
-    <div class="col-6">
-        <h3 class="text-center">Schedule</h3>
+<div id="background">
+    <br>
+    <div class="row">
+        <div class="col-6">
+            <h3 class="text-center">Schedule</h3>
+        </div>
+        <div class="col-6">
+            <h3 class="text-center">Schedule manager</h3>
+        </div>
     </div>
-    <div class="col-6">
-        <h3 class="text-center">Schedule manager</h3>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-6">
-        <ul class="list-group" id="view-schedule-timetable">
-            <!--Schedule items will be injected here-->
-        </ul>
+    <div class="row">
+        <div class="col-6">
+            <ul class="list-group" id="view-schedule-timetable">
+                <!--Schedule items will be injected here-->
+            </ul>
 
-        <!--Bottom whitespace to account for bottom status bar-->
-        <br>
-        <br>
-        <br>
-    </div>
-    <div class="col-6">
-        <div class="container-fluid sticky-top view-sticky-container">
-            <div>
-                <ul class="list-group">
-                    <!--Sample data-->
-                    <li class="list-group-item-darker list-group-flush">Work</li>
-                    <li class="list-group-item-darker list-group-flush">Break</li>
-
-                </ul>
-            </div>
+            <!--Bottom whitespace to account for bottom status bar-->
             <br>
             <br>
             <br>
-            <div>
-                <div class="form-group">
-                    <textarea class="form-control" id="new-task" rows="1" placeholder="New period"></textarea>
+        </div>
+        <div class="col-6">
+            <div class="container-fluid sticky-top view-sticky-container">
+                <div>
+                    <ul class="list-group">
+                        <!--Period items will be injected here-->
+                        <li class="list-group-item-darker list-group-flush list-period-item">Work</li>
+                        <li class="list-group-item-darker list-group-flush list-period-item">Break</li>
+                    </ul>
                 </div>
+                <br>
+                <br>
+                <br>
+                <div>
+                    <div class="form-group">
+                        <textarea class="form-control" id="new-task" rows="1" placeholder="New period"></textarea>
+                    </div>
 
-                <div class="row">
-                    <div class="col-4">
-                        <button type="submit" class="btn btn-primary">Add period</button>
-                    </div>
-                    <div class="col-4">
-                        <button type="submit" class="btn btn-warning">Edit period</button>
-                    </div>
-                    <div class="col-4">
-                        <button type="submit" class="btn btn-danger">Remove period</button>
+                    <div class="row">
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-primary">Add period</button>
+                        </div>
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-warning">Edit period</button>
+                        </div>
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-danger">Remove period</button>
+                        </div>
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
-

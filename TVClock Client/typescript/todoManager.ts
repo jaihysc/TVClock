@@ -95,12 +95,7 @@ addTaskBtn.on("click", () => {
     } else {
         tasks.push(newTask); //Create new task
     }
-
-    //Clear input boxes
-    newTaskText.val("");
-    newTaskStartDate.val("");
-    newTaskEndDate.val("");
-
+    wipeInputFields();
     //Refresh task list to include changes
     updateTaskList();
 });
@@ -186,13 +181,20 @@ function updateTaskList() {
                 taskListItems[selectedTaskIndex].classList.add("list-group-item-darker");
             }
 
-            selectedTaskIndex = i;
-            taskListItems[i].classList.add("active", "list-group-item");
-            taskListItems[i].classList.remove("list-group-item-darker");
+            //If clicking the same item, unselect it
+            if (selectedTaskIndex == i) {
+                selectedTaskIndex = -1;
 
-            //Handle visibility of edit and remove buttons
-            editTaskBtn.show();
-            removeTaskBtn.show();
+                editTaskBtn.hide();
+                removeTaskBtn.hide();
+            } else {
+                selectedTaskIndex = i;
+                taskListItems[i].classList.add("active", "list-group-item");
+                taskListItems[i].classList.remove("list-group-item-darker");
+
+                editTaskBtn.show();
+                removeTaskBtn.show();
+            }
         })
     }
 
