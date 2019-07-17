@@ -28,7 +28,8 @@ if (fetchedFromServer) {
         if (data == undefined)
             return;
         for (var i = 0; i < data.length; ++i) {
-            tasks.push(new task(data[i].text, data[i].startDate, data[i].endDate));
+            //Reconvert date text into date
+            tasks.push(new task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
         }
     });
 }
@@ -44,11 +45,11 @@ var newTaskText = $("#new-task-text");
 var newTaskStartDate = $("#new-task-start-date");
 var newTaskEndDate = $("#new-task-end-date");
 var taskErrorText = $("#new-task-text-error");
+var editUpdatingTask = false; //Keep track of whether the edit button is in use or not
 //Set placeholder start date to current time, and end date to 2 days in the future
 var currentDate = new Date();
-var currentDateString = currentDate.toDateString() + " " + currentDate.getHours() + ":" + currentDate.getMinutes();
 currentDate.setDate(currentDate.getDate() + 2); //add 2 days for the future end date
-newTaskStartDate.attr("placeholder", currentDateString);
+newTaskStartDate.attr("placeholder", toFullDateString(currentDate));
 newTaskEndDate.attr("placeholder", currentDate.toDateString());
 taskErrorText.hide(); //Hide error text by default
 //Add button click, gather information from text fields and add to task list array
@@ -69,7 +70,15 @@ addTaskBtn.on("click", function () {
     if (endDate == "") {
         endDate = String(newTaskEndDate.attr("placeholder"));
     }
-    tasks.push(new task(taskText, new Date(startDate), new Date(endDate)));
+    var newTask = new task(taskText, new Date(startDate), new Date(endDate));
+    //Perform separate function if currently editing task
+    if (editUpdatingTask) {
+        tasks[selectedTaskIndex] = newTask; //Overwrite when editing
+        editTaskBtn.trigger("click"); //Exit edit mode by clicking the edit button
+    }
+    else {
+        tasks.push(newTask); //Create new task
+    }
     //Clear input boxes
     newTaskText.val("");
     newTaskStartDate.val("");
@@ -77,6 +86,57 @@ addTaskBtn.on("click", function () {
     //Refresh task list to include changes
     updateTaskList();
 });
+//Edit and remove button functionality
+editTaskBtn.on("click", function () {
+    //Exit updating task if edit button is pressed again
+    if (editUpdatingTask) {
+        editUpdatingTask = false;
+        addTaskBtn.html("Add task");
+        editTaskBtn.html("Edit task");
+        removeTaskBtn.show();
+        wipeInputFields();
+    }
+    else {
+        //Rename add task button to update task
+        editUpdatingTask = true;
+        addTaskBtn.html("Update task");
+        editTaskBtn.html("Cancel");
+        removeTaskBtn.hide();
+        //Load data from the selected task item into fields
+        newTaskText.val(tasks[selectedTaskIndex].text);
+        newTaskStartDate.val(toFullDateString(tasks[selectedTaskIndex].startDate));
+        newTaskEndDate.val(toFullDateString(tasks[selectedTaskIndex].endDate));
+    }
+});
+removeTaskBtn.on("click", function () {
+    //Remove task by overwriting it with the tasks after it (n+1)
+    for (var i = selectedTaskIndex; i < tasks.length; ++i) {
+        //If at end of array, pop last one away since there is none after it
+        if (i + 1 >= tasks.length) {
+            tasks.pop();
+            break;
+        }
+        tasks[i] = tasks[i + 1];
+    }
+    //If there are no more tasks in the list, do not select anything
+    if (tasks.length == 0) {
+        selectedTaskIndex = -1;
+        editTaskBtn.hide();
+        removeTaskBtn.hide();
+    }
+    else if (selectedTaskIndex >= tasks.length) { //If user selected last task
+        selectedTaskIndex -= 1;
+    }
+    updateTaskList();
+});
+function wipeInputFields() {
+    newTaskText.val("");
+    newTaskStartDate.val("");
+    newTaskEndDate.val("");
+}
+function toFullDateString(date) {
+    return date.toDateString() + " " + date.getHours() + ":" + date.getMinutes();
+}
 //Injects html into the list for elements to appear on screen, saves task data to persistent
 function updateTaskList() {
     taskList.html(""); //Clear old contents first
