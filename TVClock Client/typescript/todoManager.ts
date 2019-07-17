@@ -173,6 +173,16 @@ function updateTaskList() {
     let taskListItems = $(".task-list-item");
     for (let i = 0; i < taskListItems.length; ++i) {
         taskListItems[i].addEventListener("click", () => {
+            //Cancel editing
+            if (editUpdatingTask) {
+                editUpdatingTask = false;
+                addTaskBtn.html("Add period");
+                editTaskBtn.html("Edit period");
+                removeTaskBtn.show();
+
+                wipeInputFields()
+            }
+
             //Set clicked button as active
             //The class list-group-item is added as active only shows up with list-group-item
             //Removing the custom class list-group-item-darker
