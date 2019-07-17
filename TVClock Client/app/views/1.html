@@ -27,6 +27,7 @@
                 <div>
                     <ul class="list-group">
                         <!--Period items will be injected here-->
+                        <li class="list-group-item-darker list-group-flush list-period-item">None</li>
                         <li class="list-group-item-darker list-group-flush list-period-item">Work</li>
                         <li class="list-group-item-darker list-group-flush list-period-item">Break</li>
                     </ul>
@@ -43,11 +44,15 @@
                         <div class="col-4">
                             <button type="submit" class="btn btn-primary">Add period</button>
                         </div>
-                        <div class="col-4">
-                            <button type="submit" class="btn btn-warning">Edit period</button>
-                        </div>
-                        <div class="col-4">
-                            <button type="submit" class="btn btn-danger">Remove period</button>
+                        <div class="col-8" id="period-configuration-menu">
+                            <div class="row">
+                                <div class="col-6">
+                                    <button type="submit" class="btn btn-warning">Edit period</button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="submit" class="btn btn-danger">Remove period</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
