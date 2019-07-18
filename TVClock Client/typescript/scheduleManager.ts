@@ -4,14 +4,15 @@
 import { ipcRenderer } from "electron";
 
 class scheduleItem {
-    periodName: string = "None"; //Default text on startup
+    periodName: string;
 
     hour: string; // E.G 1 AM
-    index: number; //index, 0 based for internal ue
+    index: number; //index, 0 based for internal use
 
-    constructor(periodHour: string, periodIndex: number) {
-        this.hour = periodHour;
-        this.index = periodIndex;
+    constructor(periodName: string, hour: string, index: number) {
+        this.periodName = periodName;
+        this.hour = hour;
+        this.index = index;
     }
 }
 
@@ -31,22 +32,66 @@ periodItems.push(new periodItem("None")); //Push a single default period item
 
 //-----------------------------
 //Networking and data
-//Todo, sync with server
+const scheduleItemsIdentifier = "schedule-view-scheduleItems";
+const periodItemsIdentifier = "schedule-view-periodItems";
+const fetchFromServerIdentifier = "schedule-view-fetchedFromServer";
+
+ipcRenderer.send("data-retrieve", fetchFromServerIdentifier);
+ipcRenderer.once("data-retrieve-response", (event: any, fetchedFromServer: boolean) => {
+    if (!fetchedFromServer) {
+        //Todo, fetch from server
+        console.log("server fetch");
+
+        //Generate default schedule list
+        //AM
+        for (let i = 1; i <= 12; ++i) {
+            timeTableAppend(new scheduleItem("None", i + " AM", i - 1)); //None is default period name
+        }
+        //PM
+        for (let i = 1; i <= 12; ++i) {
+            timeTableAppend(new scheduleItem("None", i + " PM", i - 1 + 12));
+        }
+
+        //Save that it has fetched from server
+        ipcRenderer.send("data-save", {identifier: fetchFromServerIdentifier, data: true});
+
+        //-----------------------------
+        //Await document ready before performing startup actions
+        $(function() {
+            refreshScheduleList();
+            refreshPeriodList();
+        });
+    } else {
+        ipcRenderer.send("data-retrieve", scheduleItemsIdentifier);
+        ipcRenderer.once("data-retrieve-response", (event: any, data: scheduleItem[]) => {
+            for (let i = 0; i < data.length; ++i) {
+                scheduleItems.push(new scheduleItem(data[i].periodName, data[i].hour, data[i].index))
+            }
+
+            ipcRenderer.send("data-retrieve", periodItemsIdentifier);
+            ipcRenderer.once("data-retrieve-response", (event: any, data: periodItem[]) => {
+                //Clear existing values
+                periodItems = [];
+
+                for (let i = 0; i < data.length; ++i) {
+                    periodItems.push(new periodItem(data[i].name))
+                }
+
+                //-----------------------------
+                //Await document ready before performing startup actions
+                $(function() {
+                    refreshScheduleList();
+                    refreshPeriodList();
+                });
+            });
+        });
+    }
+});
 
 //Containers for scheduleItems and periodItems
 let scheduleItemContainer = $("#view-schedule-scheduleItem-container");
 let periodItemContainer = $("#view-schedule-periodItem-container");
 
-//-----------------------------
-//Generate time list
-//AM
-for (let i = 1; i <= 12; ++i) {
-    timeTableAppend(new scheduleItem(i + " AM", i - 1));
-}
-//PM
-for (let i = 1; i <= 12; ++i) {
-    timeTableAppend(new scheduleItem(i + " PM", i - 1 + 12));
-}
 
 //-----------------------------
 //Schedule clickable functionality
@@ -89,7 +134,22 @@ addButton.on("click", () => {
     }
 
     errorText.hide();
-    periodItems.push(new periodItem(textInput));
+
+    if (editingPeriod) {
+        //Rename all scheduleItems with the name to the new name
+        for (let i = 0; i < scheduleItems.length; ++i) {
+            if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].name) {
+                scheduleItems[i].periodName = textInput;
+            }
+        }
+        periodItems[selectedPeriodItemIndex].name = textInput;
+
+        editButton.trigger("click");
+        refreshScheduleList();
+    } else {
+        periodItems.push(new periodItem(textInput));
+    }
+
     inputElement.val("");
 
     refreshPeriodList();
@@ -139,13 +199,6 @@ removeButton.on("click", () => {
         selectedPeriodItemIndex -= 1;
     }
 
-    refreshPeriodList();
-});
-
-//-----------------------------
-//Document ready
-$(function() {
-    refreshScheduleList();
     refreshPeriodList();
 });
 
@@ -233,6 +286,9 @@ function refreshScheduleList() {
         htmlScheduleItems[selectedScheduleItemIndex].classList.add("active", "list-group-item");
         htmlScheduleItems[selectedScheduleItemIndex].classList.remove("list-group-item-darker");
     }
+
+    //Save scheduleItems
+    ipcRenderer.send("data-save", {identifier: scheduleItemsIdentifier, data: scheduleItems});
 }
 
 function refreshPeriodList() {
@@ -296,9 +352,16 @@ function refreshPeriodList() {
         })
     }
 
+    //Save periodItems
+    ipcRenderer.send("data-save", {identifier: periodItemsIdentifier, data: periodItems});
+
     //Select the previously selected task
     if (selectedPeriodItemIndex >= 0) {
         htmlPeriodItems[selectedPeriodItemIndex].classList.add("active", "list-group-item");
         htmlPeriodItems[selectedPeriodItemIndex].classList.remove("list-group-item-darker");
+    }
+    //Do not show default period configuration menu on refresh
+    if (selectedPeriodItemIndex == 0) {
+        periodConfigurationMenu.hide();
     }
 }
