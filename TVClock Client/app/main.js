@@ -138,7 +138,8 @@ function initNetworking() {
     //Allow for changing of port + hostname
     electron_2.ipcMain.on("networking-info-modify", function (event, arg) {
         //Should receive hostname + port
-        networkConfig = arg;
+        networkConfig.port = arg.port;
+        networkConfig.hostname = arg.hostname;
         //Reconnect with new settings
         networkDisconnect();
         networkConnect();

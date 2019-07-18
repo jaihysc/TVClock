@@ -1,9 +1,10 @@
 //Renderer
+//Manager for schedule view
 
 //TODO!!!! SANITIZE USER INPUTS
 import { ipcRenderer } from "electron";
 
-class scheduleItem {
+class ScheduleItem {
     periodName: string;
 
     hour: string; // E.G 1 AM
@@ -16,7 +17,7 @@ class scheduleItem {
     }
 }
 
-class periodItem {
+class PeriodItem {
     name: string;
     color: any; //Todo, setup color for period items
 
@@ -26,9 +27,9 @@ class periodItem {
 }
 
 //List of all 24 scheduleItems
-let scheduleItems: scheduleItem[] = [];
-let periodItems: periodItem[] = [];
-periodItems.push(new periodItem("None")); //Push a single default period item
+let scheduleItems: ScheduleItem[] = [];
+let periodItems: PeriodItem[] = [];
+periodItems.push(new PeriodItem("None")); //Push a single default period item
 
 //-----------------------------
 //Networking and data
@@ -45,11 +46,11 @@ ipcRenderer.once("data-retrieve-response", (event: any, fetchedFromServer: boole
         //Generate default schedule list
         //AM
         for (let i = 1; i <= 12; ++i) {
-            timeTableAppend(new scheduleItem("None", i + " AM", i - 1)); //None is default period name
+            timeTableAppend(new ScheduleItem("None", i + " AM", i - 1)); //None is default period name
         }
         //PM
         for (let i = 1; i <= 12; ++i) {
-            timeTableAppend(new scheduleItem("None", i + " PM", i - 1 + 12));
+            timeTableAppend(new ScheduleItem("None", i + " PM", i - 1 + 12));
         }
 
         //Save that it has fetched from server
@@ -63,18 +64,18 @@ ipcRenderer.once("data-retrieve-response", (event: any, fetchedFromServer: boole
         });
     } else {
         ipcRenderer.send("data-retrieve", scheduleItemsIdentifier);
-        ipcRenderer.once("data-retrieve-response", (event: any, data: scheduleItem[]) => {
+        ipcRenderer.once("data-retrieve-response", (event: any, data: ScheduleItem[]) => {
             for (let i = 0; i < data.length; ++i) {
-                scheduleItems.push(new scheduleItem(data[i].periodName, data[i].hour, data[i].index))
+                scheduleItems.push(new ScheduleItem(data[i].periodName, data[i].hour, data[i].index))
             }
 
             ipcRenderer.send("data-retrieve", periodItemsIdentifier);
-            ipcRenderer.once("data-retrieve-response", (event: any, data: periodItem[]) => {
+            ipcRenderer.once("data-retrieve-response", (event: any, data: PeriodItem[]) => {
                 //Clear existing values
                 periodItems = [];
 
                 for (let i = 0; i < data.length; ++i) {
-                    periodItems.push(new periodItem(data[i].name))
+                    periodItems.push(new PeriodItem(data[i].name))
                 }
 
                 //-----------------------------
@@ -147,7 +148,7 @@ addButton.on("click", () => {
         editButton.trigger("click");
         refreshScheduleList();
     } else {
-        periodItems.push(new periodItem(textInput));
+        periodItems.push(new PeriodItem(textInput));
     }
 
     inputElement.val("");
@@ -179,6 +180,13 @@ editButton.on("click", () => {
 });
 
 removeButton.on("click", () => {
+    //Set scheduleItems that were using this period back to None
+    for (let i = 0; i < scheduleItems.length; ++i) {
+        if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].name) {
+            scheduleItems[i].periodName = "None";
+        }
+    }
+
     //Remove task by overwriting it with the tasks after it (n+1)
     for (let i = selectedPeriodItemIndex; i < periodItems.length; ++i) {
         //If at end of array, pop last one away since there is none after it
@@ -199,6 +207,7 @@ removeButton.on("click", () => {
         selectedPeriodItemIndex -= 1;
     }
 
+    refreshScheduleList();
     refreshPeriodList();
 });
 
@@ -214,7 +223,7 @@ function deselectAllPeriods() {
     }
 }
 
-function timeTableAppend(item: scheduleItem) {
+function timeTableAppend(item: ScheduleItem) {
     scheduleItems.push(item);
     scheduleItemContainer.append("<li class=\"list-group-item-darker list-group-flush list-time-item\">" +
         "<div class=\"row\"> <div class=\"col-2\"> " + //My apologies for this ugly html, but I assure you it works ;)

@@ -1,10 +1,11 @@
 "use strict";
 //Renderer
+//Manager for todo view
 Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
 //An active task in the task list
-var task = /** @class */ (function () {
-    function task(text, startDate, endDate) {
+var Task = /** @class */ (function () {
+    function Task(text, startDate, endDate) {
         this.text = "";
         this.startDate = new Date();
         this.endDate = new Date();
@@ -12,7 +13,7 @@ var task = /** @class */ (function () {
         this.startDate = startDate;
         this.endDate = endDate;
     }
-    return task;
+    return Task;
 }());
 var taskList = $("#active-tasks-list");
 var tasks = []; //Collection of tasks
@@ -41,7 +42,7 @@ electron_1.ipcRenderer.once("data-retrieve-response", function (event, fetchedFr
                 return;
             for (var i = 0; i < data.length; ++i) {
                 //Reconvert date text into date
-                tasks.push(new task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
+                tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
             }
             //-----------------------------
             //Wait until the document is ready before running default actions
@@ -92,7 +93,7 @@ addTaskBtn.on("click", function () {
     if (endDate == "") {
         endDate = String(newTaskEndDate.attr("placeholder"));
     }
-    var newTask = new task(taskText, new Date(startDate), new Date(endDate));
+    var newTask = new Task(taskText, new Date(startDate), new Date(endDate));
     //Perform separate function if currently editing task
     if (editUpdatingTask) {
         tasks[selectedTaskIndex] = newTask; //Overwrite when editing

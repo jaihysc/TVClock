@@ -1,9 +1,10 @@
 //Renderer
+//Manager for todo view
 
 import { ipcRenderer } from "electron";
 
 //An active task in the task list
-class task {
+class Task {
     constructor(text: string, startDate: Date, endDate: Date) {
         this.text = text;
         this.startDate = startDate;
@@ -16,7 +17,7 @@ class task {
 }
 
 let taskList = $("#active-tasks-list");
-let tasks: task[] = []; //Collection of tasks
+let tasks: Task[] = []; //Collection of tasks
 let selectedTaskIndex = -1; //Index of current selected active task
 
 //-----------------------------
@@ -40,13 +41,13 @@ ipcRenderer.once("data-retrieve-response", (event: any, fetchedFromServer: boole
     } else {
         //Retrieve back stored data
         ipcRenderer.send("data-retrieve", tasksIdentifier);
-        ipcRenderer.once("data-retrieve-response", (event: any, data: task[]) => {
+        ipcRenderer.once("data-retrieve-response", (event: any, data: Task[]) => {
             if (data == undefined)
                 return;
 
             for (let i = 0; i < data.length; ++i) {
                 //Reconvert date text into date
-                tasks.push(new task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
+                tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
             }
 
             //-----------------------------
@@ -110,7 +111,7 @@ addTaskBtn.on("click", () => {
         endDate = String(newTaskEndDate.attr("placeholder"));
     }
 
-    let newTask = new task(taskText, new Date(startDate), new Date(endDate));
+    let newTask = new Task(taskText, new Date(startDate), new Date(endDate));
 
     //Perform separate function if currently editing task
     if (editUpdatingTask) {

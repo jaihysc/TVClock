@@ -1,26 +1,27 @@
 "use strict";
 //Renderer
+//Manager for schedule view
 Object.defineProperty(exports, "__esModule", { value: true });
 //TODO!!!! SANITIZE USER INPUTS
 var electron_1 = require("electron");
-var scheduleItem = /** @class */ (function () {
-    function scheduleItem(periodName, hour, index) {
+var ScheduleItem = /** @class */ (function () {
+    function ScheduleItem(periodName, hour, index) {
         this.periodName = periodName;
         this.hour = hour;
         this.index = index;
     }
-    return scheduleItem;
+    return ScheduleItem;
 }());
-var periodItem = /** @class */ (function () {
-    function periodItem(name) {
+var PeriodItem = /** @class */ (function () {
+    function PeriodItem(name) {
         this.name = name;
     }
-    return periodItem;
+    return PeriodItem;
 }());
 //List of all 24 scheduleItems
 var scheduleItems = [];
 var periodItems = [];
-periodItems.push(new periodItem("None")); //Push a single default period item
+periodItems.push(new PeriodItem("None")); //Push a single default period item
 //-----------------------------
 //Networking and data
 var scheduleItemsIdentifier = "schedule-view-scheduleItems";
@@ -34,11 +35,11 @@ electron_1.ipcRenderer.once("data-retrieve-response", function (event, fetchedFr
         //Generate default schedule list
         //AM
         for (var i = 1; i <= 12; ++i) {
-            timeTableAppend(new scheduleItem("None", i + " AM", i - 1)); //None is default period name
+            timeTableAppend(new ScheduleItem("None", i + " AM", i - 1)); //None is default period name
         }
         //PM
         for (var i = 1; i <= 12; ++i) {
-            timeTableAppend(new scheduleItem("None", i + " PM", i - 1 + 12));
+            timeTableAppend(new ScheduleItem("None", i + " PM", i - 1 + 12));
         }
         //Save that it has fetched from server
         electron_1.ipcRenderer.send("data-save", { identifier: fetchFromServerIdentifier, data: true });
@@ -53,14 +54,14 @@ electron_1.ipcRenderer.once("data-retrieve-response", function (event, fetchedFr
         electron_1.ipcRenderer.send("data-retrieve", scheduleItemsIdentifier);
         electron_1.ipcRenderer.once("data-retrieve-response", function (event, data) {
             for (var i = 0; i < data.length; ++i) {
-                scheduleItems.push(new scheduleItem(data[i].periodName, data[i].hour, data[i].index));
+                scheduleItems.push(new ScheduleItem(data[i].periodName, data[i].hour, data[i].index));
             }
             electron_1.ipcRenderer.send("data-retrieve", periodItemsIdentifier);
             electron_1.ipcRenderer.once("data-retrieve-response", function (event, data) {
                 //Clear existing values
                 periodItems = [];
                 for (var i = 0; i < data.length; ++i) {
-                    periodItems.push(new periodItem(data[i].name));
+                    periodItems.push(new PeriodItem(data[i].name));
                 }
                 //-----------------------------
                 //Await document ready before performing startup actions
@@ -120,7 +121,7 @@ addButton.on("click", function () {
         refreshScheduleList();
     }
     else {
-        periodItems.push(new periodItem(textInput));
+        periodItems.push(new PeriodItem(textInput));
     }
     inputElement.val("");
     refreshPeriodList();
@@ -146,6 +147,12 @@ editButton.on("click", function () {
     }
 });
 removeButton.on("click", function () {
+    //Set scheduleItems that were using this period back to None
+    for (var i = 0; i < scheduleItems.length; ++i) {
+        if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].name) {
+            scheduleItems[i].periodName = "None";
+        }
+    }
     //Remove task by overwriting it with the tasks after it (n+1)
     for (var i = selectedPeriodItemIndex; i < periodItems.length; ++i) {
         //If at end of array, pop last one away since there is none after it
@@ -164,6 +171,7 @@ removeButton.on("click", function () {
     else if (selectedPeriodItemIndex >= periodItems.length) { //If user selected last task
         selectedPeriodItemIndex -= 1;
     }
+    refreshScheduleList();
     refreshPeriodList();
 });
 //-----------------------------

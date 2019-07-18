@@ -100,9 +100,11 @@ function initNetworking() {
     });
 
     //Allow for changing of port + hostname
-    ipcMain.on("networking-info-modify", (event: any, arg: networkingConfig) => {
+    ipcMain.on("networking-info-modify", (event: any, arg: { port: number; hostname: string; }) => {
         //Should receive hostname + port
-        networkConfig = arg;
+        networkConfig.port = arg.port;
+        networkConfig.hostname = arg.hostname;
+
         //Reconnect with new settings
         networkDisconnect();
         networkConnect();
