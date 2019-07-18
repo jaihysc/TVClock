@@ -4,23 +4,25 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
 var ScheduleItem = /** @class */ (function () {
-    function ScheduleItem(periodName, hour, index) {
+    function ScheduleItem(periodName, hour, color) {
         this.periodName = periodName;
         this.hour = hour;
-        this.index = index;
+        this.color = color;
     }
     return ScheduleItem;
 }());
 var PeriodItem = /** @class */ (function () {
-    function PeriodItem(name) {
+    function PeriodItem(name, color) {
         this.name = name;
+        this.color = color;
     }
     return PeriodItem;
 }());
 //List of all 24 scheduleItems
 var scheduleItems = [];
 var periodItems = [];
-periodItems.push(new PeriodItem("None")); //Push a single default period item
+var defaultPeriodColor = "464646";
+periodItems.push(new PeriodItem("None", defaultPeriodColor)); //Push a single default period item
 //-----------------------------
 //Networking and data
 var scheduleItemsIdentifier = "schedule-view-scheduleItems";
@@ -34,13 +36,13 @@ electron_1.ipcRenderer.once("data-retrieve-response", function (event, fetchedFr
         //Generate default schedule list
         //AM
         for (var i = 1; i <= 12; ++i) {
-            var item = new ScheduleItem("None", i + " AM", i - 1);
+            var item = new ScheduleItem("None", i + " AM", defaultPeriodColor);
             timeTableAppend(item); //None is default period name
             scheduleItems.push(item);
         }
         //PM
         for (var i = 1; i <= 12; ++i) {
-            var item = new ScheduleItem("None", i + " PM", i - 1 + 12);
+            var item = new ScheduleItem("None", i + " PM", defaultPeriodColor);
             timeTableAppend(item);
             scheduleItems.push(item);
         }
@@ -57,14 +59,14 @@ electron_1.ipcRenderer.once("data-retrieve-response", function (event, fetchedFr
         electron_1.ipcRenderer.send("data-retrieve", scheduleItemsIdentifier);
         electron_1.ipcRenderer.once("data-retrieve-response", function (event, data) {
             for (var i = 0; i < data.length; ++i) {
-                scheduleItems.push(new ScheduleItem(data[i].periodName, data[i].hour, data[i].index));
+                scheduleItems.push(new ScheduleItem(data[i].periodName, data[i].hour, data[i].color));
             }
             electron_1.ipcRenderer.send("data-retrieve", periodItemsIdentifier);
             electron_1.ipcRenderer.once("data-retrieve-response", function (event, data) {
                 //Clear existing values
                 periodItems = [];
                 for (var i = 0; i < data.length; ++i) {
-                    periodItems.push(new PeriodItem(data[i].name));
+                    periodItems.push(new PeriodItem(data[i].name, data[i].color));
                 }
                 //-----------------------------
                 //Await document ready before performing startup actions
@@ -106,31 +108,37 @@ addButton.on("click", function () {
     //Check for duplicates
     for (var i = 0; i < periodItems.length; ++i) {
         if (periodItems[i].name == textInput) {
+            if (editingPeriod && periodItems[selectedPeriodItemIndex].name == textInput) //Do not count itself as duplicate when editing
+                continue;
             errorText.html("Period already exists");
             errorText.show();
             return;
         }
     }
     errorText.hide();
+    var inputColorElement = $("#new-period-color");
     if (editingPeriod) {
-        //Rename all scheduleItems with the name to the new name
+        //Rename all scheduleItems with the name to the new name, change color to new color
         for (var i = 0; i < scheduleItems.length; ++i) {
             if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].name) {
                 scheduleItems[i].periodName = textInput;
+                scheduleItems[i].color = String(inputColorElement.val()).substring(1); //Substring away hex # at beginning
             }
         }
         periodItems[selectedPeriodItemIndex].name = textInput;
+        periodItems[selectedPeriodItemIndex].color = String(inputColorElement.val()).substring(1);
         editButton.trigger("click");
         refreshScheduleList();
     }
     else {
-        periodItems.push(new PeriodItem(textInput));
+        periodItems.push(new PeriodItem(textInput, String(inputColorElement.val()).substring(1))); //Cut off the # at the start of the color string
     }
     inputElement.val("");
     refreshPeriodList();
 });
 editButton.on("click", function () {
     var inputElement = $("#new-period-text");
+    var inputColorElement = $("#new-period-color");
     //Exit updating if edit button is repressed
     if (editingPeriod) {
         editingPeriod = false;
@@ -147,13 +155,15 @@ editButton.on("click", function () {
         removeButton.hide();
         //Load data from the selected task item into fields
         inputElement.val(periodItems[selectedPeriodItemIndex].name);
+        inputColorElement.val("#" + periodItems[selectedPeriodItemIndex].color);
     }
 });
 removeButton.on("click", function () {
-    //Set scheduleItems that were using this period back to None
+    //Set scheduleItems that were using this period back to None, set color to default
     for (var i = 0; i < scheduleItems.length; ++i) {
         if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].name) {
             scheduleItems[i].periodName = "None";
+            scheduleItems[i].color = defaultPeriodColor;
         }
     }
     //Remove task by overwriting it with the tasks after it (n+1)
@@ -183,7 +193,7 @@ function deselectAllPeriods() {
     selectedPeriodItemIndex = -1;
     var htmlPeriodItems = $(".list-period-item");
     for (var i = 0; i < htmlPeriodItems.length; ++i) {
-        htmlPeriodItems[i].classList.remove("active", "list-group-item");
+        htmlPeriodItems[i].classList.remove("active-important", "list-group-item");
         htmlPeriodItems[i].classList.add("list-group-item-darker");
     }
 }
@@ -197,6 +207,7 @@ function timeTableAppend(item) {
         .append(newScheduleItemColumn2);
     var newScheduleItem = $("<li class='list-group-item-darker list-group-flush list-time-item'/>");
     newScheduleItem.append(newScheduleItemRow);
+    newScheduleItem.css("background-color", "#" + item.color); //Set color
     newScheduleItem.appendTo(scheduleItemContainer);
 }
 //Refresh list
@@ -215,7 +226,7 @@ function refreshScheduleList() {
             //The class list-group-item is added as active only shows up with list-group-item
             //Removing the custom class list-group-item-darker
             if (selectedScheduleItemIndex >= 0) {
-                htmlScheduleItems[selectedScheduleItemIndex].classList.remove("active", "list-group-item");
+                htmlScheduleItems[selectedScheduleItemIndex].classList.remove("active-important", "list-group-item");
                 htmlScheduleItems[selectedScheduleItemIndex].classList.add("list-group-item-darker");
             }
             //If clicking the same item, unselect it
@@ -226,7 +237,7 @@ function refreshScheduleList() {
             }
             else {
                 selectedScheduleItemIndex = i;
-                htmlScheduleItems[i].classList.add("active", "list-group-item");
+                htmlScheduleItems[i].classList.add("active-important", "list-group-item");
                 htmlScheduleItems[i].classList.remove("list-group-item-darker");
                 //Select scheduleItem item associated with the schedule
                 scheduleItemSelected = true;
@@ -249,7 +260,7 @@ function refreshScheduleList() {
     }
     //Select the previously selected task
     if (selectedScheduleItemIndex >= 0) {
-        htmlScheduleItems[selectedScheduleItemIndex].classList.add("active", "list-group-item");
+        htmlScheduleItems[selectedScheduleItemIndex].classList.add("active-important", "list-group-item");
         htmlScheduleItems[selectedScheduleItemIndex].classList.remove("list-group-item-darker");
     }
     //Save scheduleItems
@@ -259,6 +270,7 @@ function refreshPeriodList() {
     periodItemContainer.html(" "); //Clear old text
     for (var i = 0; i < periodItems.length; ++i) {
         $("<li class='list-group-item-darker list-group-flush list-period-item'/>")
+            .css("background-color", "#" + periodItems[i].color)
             .text(periodItems[i].name)
             .appendTo(periodItemContainer);
     }
@@ -277,7 +289,7 @@ function refreshPeriodList() {
             //The class list-group-item is added as active only shows up with list-group-item
             //Removing the custom class list-group-item-darker
             if (selectedPeriodItemIndex >= 0) {
-                htmlPeriodItems[selectedPeriodItemIndex].classList.remove("active", "list-group-item");
+                htmlPeriodItems[selectedPeriodItemIndex].classList.remove("active-important", "list-group-item");
                 htmlPeriodItems[selectedPeriodItemIndex].classList.add("list-group-item-darker");
             }
             //Allow unselecting of period items only when configurating periods
@@ -287,12 +299,13 @@ function refreshPeriodList() {
             }
             else {
                 selectedPeriodItemIndex = i;
-                htmlPeriodItems[i].classList.add("active", "list-group-item");
+                htmlPeriodItems[i].classList.add("active-important", "list-group-item");
                 htmlPeriodItems[i].classList.remove("list-group-item-darker");
                 //Allow choosing period of a scheduleItem if a scheduleItem is selected
                 if (scheduleItemSelected) {
                     //Set the value of the scheduleItem to the period
-                    scheduleItems[selectedScheduleItemIndex].periodName = htmlPeriodItems[selectedPeriodItemIndex].innerHTML;
+                    scheduleItems[selectedScheduleItemIndex].periodName = periodItems[selectedPeriodItemIndex].name;
+                    scheduleItems[selectedScheduleItemIndex].color = periodItems[selectedPeriodItemIndex].color;
                     //Refresh for text changes to the schedule list to show up
                     refreshScheduleList();
                     periodConfigurationMenu.hide();
@@ -315,7 +328,7 @@ function refreshPeriodList() {
     electron_1.ipcRenderer.send("data-save", { identifier: periodItemsIdentifier, data: periodItems });
     //Select the previously selected task
     if (selectedPeriodItemIndex >= 0) {
-        htmlPeriodItems[selectedPeriodItemIndex].classList.add("active", "list-group-item");
+        htmlPeriodItems[selectedPeriodItemIndex].classList.add("active-important", "list-group-item");
         htmlPeriodItems[selectedPeriodItemIndex].classList.remove("list-group-item-darker");
     }
     //Do not show default period configuration menu on refresh

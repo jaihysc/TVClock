@@ -8,7 +8,7 @@ var RequestType;
     RequestType[RequestType["Update"] = 2] = "Update";
     RequestType[RequestType["Sync"] = 3] = "Sync";
 })(RequestType || (RequestType = {}));
-//Class to deseralize responses from the server
+//Class to deserialize responses from the server
 var ServerResponse = /** @class */ (function () {
     function ServerResponse() {
     }

@@ -64,3 +64,8 @@ body {
     /*margin: 0;*/
     /*padding: 2px;*/
 }
+
+/* Used for overwriting the schedule background css color selector*/
+.active-important {
+    background-color: #007bff !important;
+}

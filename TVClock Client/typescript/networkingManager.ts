@@ -9,7 +9,7 @@ enum RequestType {
     Sync, //Server - Update client data from server
 }
 
-//Class to deseralize responses from the server
+//Class to deserialize responses from the server
 class ServerResponse {
     requestType: RequestType | undefined;
     data: any[] | undefined;

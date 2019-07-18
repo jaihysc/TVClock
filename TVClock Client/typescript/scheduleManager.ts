@@ -7,28 +7,30 @@ class ScheduleItem {
     periodName: string;
 
     hour: string; // E.G 1 AM
-    index: number; //index, 0 based for internal use
+    color: string; //6 character hex string
 
-    constructor(periodName: string, hour: string, index: number) {
+    constructor(periodName: string, hour: string, color: string) {
         this.periodName = periodName;
         this.hour = hour;
-        this.index = index;
+        this.color = color;
     }
 }
 
 class PeriodItem {
     name: string;
-    color: any; //Todo, setup color for period items
+    color: string; //6 character Hexadecimal string
 
-    constructor(name: string) {
+    constructor(name: string, color: string) {
         this.name = name;
+        this.color = color;
     }
 }
 
 //List of all 24 scheduleItems
 let scheduleItems: ScheduleItem[] = [];
 let periodItems: PeriodItem[] = [];
-periodItems.push(new PeriodItem("None")); //Push a single default period item
+const defaultPeriodColor = "464646";
+periodItems.push(new PeriodItem("None", defaultPeriodColor)); //Push a single default period item
 
 //-----------------------------
 //Networking and data
@@ -45,13 +47,13 @@ ipcRenderer.once("data-retrieve-response", (event: any, fetchedFromServer: boole
         //Generate default schedule list
         //AM
         for (let i = 1; i <= 12; ++i) {
-            let item = new ScheduleItem("None", i + " AM", i - 1);
+            let item = new ScheduleItem("None", i + " AM", defaultPeriodColor);
             timeTableAppend(item); //None is default period name
             scheduleItems.push(item);
         }
         //PM
         for (let i = 1; i <= 12; ++i) {
-            let item = new ScheduleItem("None", i + " PM", i - 1 + 12);
+            let item = new ScheduleItem("None", i + " PM", defaultPeriodColor);
             timeTableAppend(item);
             scheduleItems.push(item);
         }
@@ -69,7 +71,7 @@ ipcRenderer.once("data-retrieve-response", (event: any, fetchedFromServer: boole
         ipcRenderer.send("data-retrieve", scheduleItemsIdentifier);
         ipcRenderer.once("data-retrieve-response", (event: any, data: ScheduleItem[]) => {
             for (let i = 0; i < data.length; ++i) {
-                scheduleItems.push(new ScheduleItem(data[i].periodName, data[i].hour, data[i].index))
+                scheduleItems.push(new ScheduleItem(data[i].periodName, data[i].hour, data[i].color))
             }
 
             ipcRenderer.send("data-retrieve", periodItemsIdentifier);
@@ -78,7 +80,7 @@ ipcRenderer.once("data-retrieve-response", (event: any, fetchedFromServer: boole
                 periodItems = [];
 
                 for (let i = 0; i < data.length; ++i) {
-                    periodItems.push(new PeriodItem(data[i].name))
+                    periodItems.push(new PeriodItem(data[i].name, data[i].color))
                 }
 
                 //-----------------------------
@@ -131,6 +133,9 @@ addButton.on("click", () => {
     //Check for duplicates
     for (let i = 0; i < periodItems.length; ++i) {
         if (periodItems[i].name == textInput) {
+            if (editingPeriod && periodItems[selectedPeriodItemIndex].name == textInput) //Do not count itself as duplicate when editing
+                continue;
+
             errorText.html("Period already exists");
             errorText.show();
             return;
@@ -139,19 +144,24 @@ addButton.on("click", () => {
 
     errorText.hide();
 
+    let inputColorElement = $("#new-period-color");
+
     if (editingPeriod) {
-        //Rename all scheduleItems with the name to the new name
+        //Rename all scheduleItems with the name to the new name, change color to new color
         for (let i = 0; i < scheduleItems.length; ++i) {
             if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].name) {
                 scheduleItems[i].periodName = textInput;
+                scheduleItems[i].color = String(inputColorElement.val()).substring(1); //Substring away hex # at beginning
             }
         }
+
         periodItems[selectedPeriodItemIndex].name = textInput;
+        periodItems[selectedPeriodItemIndex].color = String(inputColorElement.val()).substring(1);
 
         editButton.trigger("click");
         refreshScheduleList();
     } else {
-        periodItems.push(new PeriodItem(textInput));
+        periodItems.push(new PeriodItem(textInput, String(inputColorElement.val()).substring(1))); //Cut off the # at the start of the color string
     }
 
     inputElement.val("");
@@ -161,7 +171,7 @@ addButton.on("click", () => {
 
 editButton.on("click", () => {
     let inputElement = $("#new-period-text");
-
+    let inputColorElement = $("#new-period-color");
     //Exit updating if edit button is repressed
     if (editingPeriod) {
         editingPeriod = false;
@@ -179,14 +189,16 @@ editButton.on("click", () => {
 
         //Load data from the selected task item into fields
         inputElement.val(periodItems[selectedPeriodItemIndex].name);
+        inputColorElement.val("#" + periodItems[selectedPeriodItemIndex].color);
     }
 });
 
 removeButton.on("click", () => {
-    //Set scheduleItems that were using this period back to None
+    //Set scheduleItems that were using this period back to None, set color to default
     for (let i = 0; i < scheduleItems.length; ++i) {
         if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].name) {
             scheduleItems[i].periodName = "None";
+            scheduleItems[i].color = defaultPeriodColor;
         }
     }
 
@@ -221,7 +233,7 @@ function deselectAllPeriods() {
 
     let htmlPeriodItems = $(".list-period-item");
     for (let i = 0; i < htmlPeriodItems.length; ++i) {
-        htmlPeriodItems[i].classList.remove("active", "list-group-item");
+        htmlPeriodItems[i].classList.remove("active-important", "list-group-item");
         htmlPeriodItems[i].classList.add("list-group-item-darker");
     }
 }
@@ -239,6 +251,7 @@ function timeTableAppend(item: ScheduleItem) {
     let newScheduleItem = $("<li class='list-group-item-darker list-group-flush list-time-item'/>");
     newScheduleItem.append(newScheduleItemRow);
 
+    newScheduleItem.css("background-color", "#" + item.color); //Set color
     newScheduleItem.appendTo(scheduleItemContainer);
 }
 
@@ -260,7 +273,7 @@ function refreshScheduleList() {
             //The class list-group-item is added as active only shows up with list-group-item
             //Removing the custom class list-group-item-darker
             if (selectedScheduleItemIndex >= 0) {
-                htmlScheduleItems[selectedScheduleItemIndex].classList.remove("active", "list-group-item");
+                htmlScheduleItems[selectedScheduleItemIndex].classList.remove("active-important", "list-group-item");
                 htmlScheduleItems[selectedScheduleItemIndex].classList.add("list-group-item-darker");
             }
 
@@ -273,7 +286,8 @@ function refreshScheduleList() {
                 deselectAllPeriods();
             } else {
                 selectedScheduleItemIndex = i;
-                htmlScheduleItems[i].classList.add("active", "list-group-item");
+
+                htmlScheduleItems[i].classList.add("active-important", "list-group-item");
                 htmlScheduleItems[i].classList.remove("list-group-item-darker");
 
                 //Select scheduleItem item associated with the schedule
@@ -298,7 +312,7 @@ function refreshScheduleList() {
 
     //Select the previously selected task
     if (selectedScheduleItemIndex >= 0) {
-        htmlScheduleItems[selectedScheduleItemIndex].classList.add("active", "list-group-item");
+        htmlScheduleItems[selectedScheduleItemIndex].classList.add("active-important", "list-group-item");
         htmlScheduleItems[selectedScheduleItemIndex].classList.remove("list-group-item-darker");
     }
 
@@ -311,6 +325,8 @@ function refreshPeriodList() {
 
     for (let i = 0; i < periodItems.length; ++i) {
         $("<li class='list-group-item-darker list-group-flush list-period-item'/>")
+            .css("background-color", "#" + periodItems[i].color)
+
             .text(periodItems[i].name)
             .appendTo(periodItemContainer);
     }
@@ -334,7 +350,7 @@ function refreshPeriodList() {
             //The class list-group-item is added as active only shows up with list-group-item
             //Removing the custom class list-group-item-darker
             if (selectedPeriodItemIndex >= 0) {
-                htmlPeriodItems[selectedPeriodItemIndex].classList.remove("active", "list-group-item");
+                htmlPeriodItems[selectedPeriodItemIndex].classList.remove("active-important", "list-group-item");
                 htmlPeriodItems[selectedPeriodItemIndex].classList.add("list-group-item-darker");
             }
 
@@ -344,13 +360,14 @@ function refreshPeriodList() {
                 periodConfigurationMenu.hide();
             } else {
                 selectedPeriodItemIndex = i;
-                htmlPeriodItems[i].classList.add("active", "list-group-item");
+                htmlPeriodItems[i].classList.add("active-important", "list-group-item");
                 htmlPeriodItems[i].classList.remove("list-group-item-darker");
 
                 //Allow choosing period of a scheduleItem if a scheduleItem is selected
                 if (scheduleItemSelected) {
                     //Set the value of the scheduleItem to the period
-                    scheduleItems[selectedScheduleItemIndex].periodName = htmlPeriodItems[selectedPeriodItemIndex].innerHTML;
+                    scheduleItems[selectedScheduleItemIndex].periodName = periodItems[selectedPeriodItemIndex].name;
+                    scheduleItems[selectedScheduleItemIndex].color = periodItems[selectedPeriodItemIndex].color;
 
                     //Refresh for text changes to the schedule list to show up
                     refreshScheduleList();
@@ -373,7 +390,7 @@ function refreshPeriodList() {
 
     //Select the previously selected task
     if (selectedPeriodItemIndex >= 0) {
-        htmlPeriodItems[selectedPeriodItemIndex].classList.add("active", "list-group-item");
+        htmlPeriodItems[selectedPeriodItemIndex].classList.add("active-important", "list-group-item");
         htmlPeriodItems[selectedPeriodItemIndex].classList.remove("list-group-item-darker");
     }
     //Do not show default period configuration menu on refresh
