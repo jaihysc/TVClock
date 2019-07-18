@@ -1,5 +1,5 @@
 //Renderer
-//Manager for todo view
+//Manager for tasks view
 
 import { ipcRenderer } from "electron";
 
@@ -190,10 +190,13 @@ function updateTaskList() {
     taskList.html(""); //Clear old contents first
 
     for (let i = 0; i < tasks.length; ++i) {
-        //Inject each task into the html
-        taskList.append(" <li class=\"list-group-item-darker list-group-flush task-list-item\">" + tasks[i].text +
-            "<p class=\"list-item-description\">" + tasks[i].startDate + " - " + tasks[i].endDate +
-            "</p></li>");
+        //Inject each task into the html after sanitizing it
+        let pTag = $("<p class='list-item-description'/>")
+            .text(tasks[i].startDate + " - " + tasks[i].endDate);
+        $("<li class='list-group-item-darker list-group-flush task-list-item'>")
+            .text(tasks[i].text)
+            .append(pTag)
+            .appendTo(taskList);
     }
 
     //Create event handlers for each task so it can be set active

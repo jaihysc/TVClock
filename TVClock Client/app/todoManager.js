@@ -1,6 +1,6 @@
 "use strict";
 //Renderer
-//Manager for todo view
+//Manager for tasks view
 Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
 //An active task in the task list
@@ -163,10 +163,13 @@ function toFullDateString(date) {
 function updateTaskList() {
     taskList.html(""); //Clear old contents first
     for (var i = 0; i < tasks.length; ++i) {
-        //Inject each task into the html
-        taskList.append(" <li class=\"list-group-item-darker list-group-flush task-list-item\">" + tasks[i].text +
-            "<p class=\"list-item-description\">" + tasks[i].startDate + " - " + tasks[i].endDate +
-            "</p></li>");
+        //Inject each task into the html after sanitizing it
+        var pTag = $("<p class='list-item-description'/>")
+            .text(tasks[i].startDate + " - " + tasks[i].endDate);
+        $("<li class='list-group-item-darker list-group-flush task-list-item'>")
+            .text(tasks[i].text)
+            .append(pTag)
+            .appendTo(taskList);
     }
     //Create event handlers for each task so it can be set active
     var taskListItems = $(".task-list-item");

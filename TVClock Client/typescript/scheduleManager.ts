@@ -1,7 +1,6 @@
 //Renderer
 //Manager for schedule view
 
-//TODO!!!! SANITIZE USER INPUTS
 import { ipcRenderer } from "electron";
 
 class ScheduleItem {
@@ -46,11 +45,15 @@ ipcRenderer.once("data-retrieve-response", (event: any, fetchedFromServer: boole
         //Generate default schedule list
         //AM
         for (let i = 1; i <= 12; ++i) {
-            timeTableAppend(new ScheduleItem("None", i + " AM", i - 1)); //None is default period name
+            let item = new ScheduleItem("None", i + " AM", i - 1);
+            timeTableAppend(item); //None is default period name
+            scheduleItems.push(item);
         }
         //PM
         for (let i = 1; i <= 12; ++i) {
-            timeTableAppend(new ScheduleItem("None", i + " PM", i - 1 + 12));
+            let item = new ScheduleItem("None", i + " PM", i - 1 + 12);
+            timeTableAppend(item);
+            scheduleItems.push(item);
         }
 
         //Save that it has fetched from server
@@ -224,23 +227,26 @@ function deselectAllPeriods() {
 }
 
 function timeTableAppend(item: ScheduleItem) {
-    scheduleItems.push(item);
-    scheduleItemContainer.append("<li class=\"list-group-item-darker list-group-flush list-time-item\">" +
-        "<div class=\"row\"> <div class=\"col-2\"> " + //My apologies for this ugly html, but I assure you it works ;)
-        "<p class=\"\">" + item.hour + "</p> </div> " +
-        "<div class=\"col-10\"> <p class=\"\">" + item.periodName +
-        "</p> </div> </div> </li>")
+    let newScheduleItemColumn1 = $("<div class='col-3'/>")
+        .text(item.hour);
+    let newScheduleItemColumn2 = $("<div class='col-9'/>")
+        .append(item.periodName); //Period name in scheduleItems will not need to be escaped as they are escaped earlier (hopefully)
+
+    let newScheduleItemRow = $("<div class='row'/>")
+        .append(newScheduleItemColumn1)
+        .append(newScheduleItemColumn2);
+
+    let newScheduleItem = $("<li class='list-group-item-darker list-group-flush list-time-item'/>");
+    newScheduleItem.append(newScheduleItemRow);
+
+    newScheduleItem.appendTo(scheduleItemContainer);
 }
 
 //Refresh list
 function refreshScheduleList() {
     scheduleItemContainer.html(" "); //Clear old text
     for (let i = 0; i < scheduleItems.length; ++i) {
-        scheduleItemContainer.append("<li class=\"list-group-item-darker list-group-flush list-time-item\">" +
-            "<div class=\"row\"> <div class=\"col-2\"> " + //My apologies for this ugly html, but I assure you it works ;)
-            "<p class=\"\">" + scheduleItems[i].hour + "</p> </div> " +
-            "<div class=\"col-10\"> <p class=\"\">" + scheduleItems[i].periodName +
-            "</p> </div> </div> </li>")
+        timeTableAppend(scheduleItems[i]);
     }
 
     //Setup schedule item click handlers
@@ -304,8 +310,9 @@ function refreshPeriodList() {
     periodItemContainer.html(" "); //Clear old text
 
     for (let i = 0; i < periodItems.length; ++i) {
-        periodItemContainer.append(
-            `<li class=\"list-group-item-darker list-group-flush list-period-item\">${periodItems[i].name}</li>`);
+        $("<li class='list-group-item-darker list-group-flush list-period-item'/>")
+            .text(periodItems[i].name)
+            .appendTo(periodItemContainer);
     }
 
     let htmlPeriodItems = $(".list-period-item");
