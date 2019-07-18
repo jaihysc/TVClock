@@ -1,6 +1,6 @@
 "use strict";
 //Renderer
-//TODO!!!! SANITIZE USER INPUTS
+Object.defineProperty(exports, "__esModule", { value: true });
 var scheduleItem = /** @class */ (function () {
     function scheduleItem(periodHour, periodIndex) {
         this.periodName = "None"; //Default text on startup
@@ -19,9 +19,13 @@ var periodItem = /** @class */ (function () {
 var scheduleItems = [];
 var periodItems = [];
 periodItems.push(new periodItem("None")); //Push a single default period item
+//-----------------------------
+//Networking and data
+//Todo, sync with server
 //Containers for scheduleItems and periodItems
 var scheduleItemContainer = $("#view-schedule-scheduleItem-container");
 var periodItemContainer = $("#view-schedule-periodItem-container");
+//-----------------------------
 //Generate time list
 //AM
 for (var i = 1; i <= 12; ++i) {
@@ -31,6 +35,7 @@ for (var i = 1; i <= 12; ++i) {
 for (var i = 1; i <= 12; ++i) {
     timeTableAppend(new scheduleItem(i + " PM", i - 1 + 12));
 }
+//-----------------------------
 //Schedule clickable functionality
 var selectedScheduleItemIndex = -1;
 //Whether or not the user has selected a scheduleItem
@@ -38,6 +43,7 @@ var scheduleItemSelected = false;
 var selectedPeriodItemIndex = -1; //-1 indicates nothing is selected
 var periodConfigurationMenu = $("#period-configuration-menu");
 periodConfigurationMenu.hide();
+//-----------------------------
 //Handlers for add, edit and remove buttons
 var addButton = $("#schedule-period-add");
 var editButton = $("#schedule-period-edit");
@@ -53,7 +59,7 @@ addButton.on("click", function () {
         errorText.show();
         return;
     }
-    //Check for duplicats
+    //Check for duplicates
     for (var i = 0; i < periodItems.length; ++i) {
         if (periodItems[i].name == textInput) {
             errorText.html("Period already exists");
@@ -107,12 +113,14 @@ removeButton.on("click", function () {
     }
     refreshPeriodList();
 });
+//-----------------------------
 //Document ready
 $(function () {
     refreshScheduleList();
     refreshPeriodList();
 });
-//
+//-----------------------------
+//Functions
 function deselectAllPeriods() {
     selectedPeriodItemIndex = -1;
     var htmlPeriodItems = $(".list-period-item");

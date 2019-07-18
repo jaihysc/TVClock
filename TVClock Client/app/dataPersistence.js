@@ -7,6 +7,9 @@ var electron_1 = require("electron");
 var dataNode = /** @class */ (function () {
     function dataNode() {
         this.identifier = "";
+        this.data = null;
+        this.left = null;
+        this.right = null;
     }
     return dataNode;
 }());
@@ -31,22 +34,20 @@ electron_1.ipcMain.on("data-retrieve", function (event, identifier) {
 //Searches for the identifier Returns null if there is no match
 function dataAdd(identifier, data) {
     var foundNode = binaryNodeSearch(headNode, identifier);
-    if (foundNode != undefined) {
-        foundNode.identifier = identifier;
-        foundNode.data = data;
-    }
+    foundNode.identifier = identifier;
+    foundNode.data = data;
 }
 //Returns an  dataNode in the binary tree using the identifier, undefined if it does not exist
 function binaryNodeSearch(node, identifier) {
-    //if node does not have values, return it
+    //if node does not have an identifier or is copy of existing identifier, return it
     if (node.identifier == "" || node.identifier == identifier) {
         return node;
     }
     //left
     if (identifierCompare(identifier, node.identifier)) {
         //Recursively traverse the nodes until finding a non active node
-        if (node.left != undefined) {
-            binaryNodeSearch(node.left, identifier);
+        if (node.left != null) {
+            return binaryNodeSearch(node.left, identifier);
         }
         else {
             node.left = new dataNode();
@@ -55,8 +56,8 @@ function binaryNodeSearch(node, identifier) {
     }
     else {
         //Right
-        if (node.right != undefined) {
-            binaryNodeSearch(node.right, identifier);
+        if (node.right != null) {
+            return binaryNodeSearch(node.right, identifier);
         }
         else {
             node.right = new dataNode();

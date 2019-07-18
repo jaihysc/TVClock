@@ -6,11 +6,18 @@ import { ipcMain } from "electron";
 //Accessed via events
 
 class dataNode {
-    left: dataNode | undefined;
-    right: dataNode | undefined;
+    left: dataNode | null;
+    right: dataNode | null;
 
-    identifier: string = "";
+    identifier: string;
     data: any;
+
+    constructor() {
+        this.identifier = "";
+        this.data = null;
+        this.left = null;
+        this.right = null;
+    }
 }
 
 //Binary search for adding and retrieving data
@@ -40,15 +47,13 @@ ipcMain.on("data-retrieve", (event: any, identifier: string) => {
 //Searches for the identifier Returns null if there is no match
 function dataAdd(identifier: string, data: any) {
     let foundNode = binaryNodeSearch(headNode, identifier);
-    if (foundNode != undefined) {
-        foundNode.identifier = identifier;
-        foundNode.data = data;
-    }
+    foundNode.identifier = identifier;
+    foundNode.data = data;
 }
 
 //Returns an  dataNode in the binary tree using the identifier, undefined if it does not exist
-function binaryNodeSearch(node: dataNode, identifier: string) {
-    //if node does not have values, return it
+function binaryNodeSearch(node: dataNode, identifier: string): dataNode {
+    //if node does not have an identifier or is copy of existing identifier, return it
     if (node.identifier == "" || node.identifier == identifier) {
         return node;
     }
@@ -56,16 +61,16 @@ function binaryNodeSearch(node: dataNode, identifier: string) {
     //left
     if (identifierCompare(identifier, node.identifier)) {
         //Recursively traverse the nodes until finding a non active node
-        if (node.left != undefined) {
-            binaryNodeSearch(node.left, identifier);
+        if (node.left != null) {
+            return binaryNodeSearch(node.left, identifier);
         } else {
             node.left = new dataNode();
             return node.left;
         }
     } else {
         //Right
-        if (node.right != undefined) {
-            binaryNodeSearch(node.right, identifier);
+        if (node.right != null) {
+            return binaryNodeSearch(node.right, identifier);
         } else {
             node.right = new dataNode();
             return node.right;

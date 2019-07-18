@@ -1,6 +1,7 @@
 //Renderer
 
 //TODO!!!! SANITIZE USER INPUTS
+import { ipcRenderer } from "electron";
 
 class scheduleItem {
     periodName: string = "None"; //Default text on startup
@@ -28,10 +29,15 @@ let scheduleItems: scheduleItem[] = [];
 let periodItems: periodItem[] = [];
 periodItems.push(new periodItem("None")); //Push a single default period item
 
+//-----------------------------
+//Networking and data
+//Todo, sync with server
+
 //Containers for scheduleItems and periodItems
 let scheduleItemContainer = $("#view-schedule-scheduleItem-container");
 let periodItemContainer = $("#view-schedule-periodItem-container");
 
+//-----------------------------
 //Generate time list
 //AM
 for (let i = 1; i <= 12; ++i) {
@@ -42,6 +48,7 @@ for (let i = 1; i <= 12; ++i) {
     timeTableAppend(new scheduleItem(i + " PM", i - 1 + 12));
 }
 
+//-----------------------------
 //Schedule clickable functionality
 let selectedScheduleItemIndex = -1;
 
@@ -53,6 +60,7 @@ let selectedPeriodItemIndex = -1; //-1 indicates nothing is selected
 let periodConfigurationMenu = $("#period-configuration-menu");
 periodConfigurationMenu.hide();
 
+//-----------------------------
 //Handlers for add, edit and remove buttons
 let addButton = $("#schedule-period-add");
 let editButton = $("#schedule-period-edit");
@@ -71,7 +79,7 @@ addButton.on("click", () => {
         return;
     }
 
-    //Check for duplicats
+    //Check for duplicates
     for (let i = 0; i < periodItems.length; ++i) {
         if (periodItems[i].name == textInput) {
             errorText.html("Period already exists");
@@ -134,14 +142,15 @@ removeButton.on("click", () => {
     refreshPeriodList();
 });
 
+//-----------------------------
 //Document ready
 $(function() {
     refreshScheduleList();
     refreshPeriodList();
 });
 
-//
-
+//-----------------------------
+//Functions
 function deselectAllPeriods() {
     selectedPeriodItemIndex = -1;
 
