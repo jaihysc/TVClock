@@ -1,8 +1,12 @@
 "use strict";
 //Renderer
 //Manager for schedule view
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
+var invert_color_1 = __importDefault(require("invert-color"));
 var ScheduleItem = /** @class */ (function () {
     function ScheduleItem(periodName, hour, color) {
         this.periodName = periodName;
@@ -207,6 +211,7 @@ function timeTableAppend(item) {
         .append(newScheduleItemColumn2);
     var newScheduleItem = $("<li class='list-group-item-darker list-group-flush list-time-item'/>");
     newScheduleItem.append(newScheduleItemRow);
+    newScheduleItem.css("color", invert_color_1.default(item.color)); //Invert foreground color to stand out
     newScheduleItem.css("background-color", "#" + item.color); //Set color
     newScheduleItem.appendTo(scheduleItemContainer);
 }
@@ -271,6 +276,7 @@ function refreshPeriodList() {
     for (var i = 0; i < periodItems.length; ++i) {
         $("<li class='list-group-item-darker list-group-flush list-period-item'/>")
             .css("background-color", "#" + periodItems[i].color)
+            .css("color", invert_color_1.default(periodItems[i].color))
             .text(periodItems[i].name)
             .appendTo(periodItemContainer);
     }

@@ -2,6 +2,7 @@
 //Manager for schedule view
 
 import { ipcRenderer } from "electron";
+import invert, { RGB, RgbArray, HexColor, BlackWhite } from "invert-color";
 
 class ScheduleItem {
     periodName: string;
@@ -251,6 +252,7 @@ function timeTableAppend(item: ScheduleItem) {
     let newScheduleItem = $("<li class='list-group-item-darker list-group-flush list-time-item'/>");
     newScheduleItem.append(newScheduleItemRow);
 
+    newScheduleItem.css("color", invert(item.color)); //Invert foreground color to stand out
     newScheduleItem.css("background-color", "#" + item.color); //Set color
     newScheduleItem.appendTo(scheduleItemContainer);
 }
@@ -326,7 +328,7 @@ function refreshPeriodList() {
     for (let i = 0; i < periodItems.length; ++i) {
         $("<li class='list-group-item-darker list-group-flush list-period-item'/>")
             .css("background-color", "#" + periodItems[i].color)
-
+            .css("color", invert(periodItems[i].color))
             .text(periodItems[i].name)
             .appendTo(periodItemContainer);
     }
