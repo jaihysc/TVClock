@@ -7,6 +7,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
 var invert_color_1 = __importDefault(require("invert-color"));
+var RequestTypes_1 = require("./RequestTypes");
 var ScheduleItem = /** @class */ (function () {
     function ScheduleItem(periodName, hour, color) {
         this.periodName = periodName;
@@ -22,65 +23,64 @@ var PeriodItem = /** @class */ (function () {
     }
     return PeriodItem;
 }());
+//--------------------------
+//Setup
 //List of all 24 scheduleItems
 var scheduleItems = [];
 var periodItems = [];
 var defaultPeriodColor = "464646";
 periodItems.push(new PeriodItem("None", defaultPeriodColor)); //Push a single default period item
-//-----------------------------
-//Networking and data
 var scheduleItemsIdentifier = "schedule-view-scheduleItems";
 var periodItemsIdentifier = "schedule-view-periodItems";
-var fetchFromServerIdentifier = "schedule-view-fetchedFromServer";
-electron_1.ipcRenderer.send("data-retrieve", fetchFromServerIdentifier);
-electron_1.ipcRenderer.once("data-retrieve-response", function (event, fetchedFromServer) {
+//-----------------------------
+//Networking and data
+//Await document ready before performing startup actions
+$(function () {
+    var fetchFromServerIdentifier = "schedule-view-fetchedFromServer";
+    var fetchedFromServer = electron_1.ipcRenderer.sendSync("data-retrieve", fetchFromServerIdentifier);
     if (!fetchedFromServer) {
-        //Todo, fetch from server
-        console.log("server fetch");
-        //Generate default schedule list
-        //AM
-        for (var i = 1; i <= 12; ++i) {
-            var item = new ScheduleItem("None", i + " AM", defaultPeriodColor);
-            timeTableAppend(item); //None is default period name
-            scheduleItems.push(item);
+        var jsonData = electron_1.ipcRenderer.sendSync("networking-send", { requestType: RequestTypes_1.RequestType.Get, identifiers: [scheduleItemsIdentifier] });
+        var data = JSON.parse(jsonData.data[0]);
+        //Generate default schedule list if not defined by the server
+        if (data == undefined) {
+            //AM
+            for (var i = 1; i <= 12; ++i) {
+                var item = new ScheduleItem("None", i + " AM", defaultPeriodColor);
+                timeTableAppend(item); //None is default period name
+                scheduleItems.push(item);
+            }
+            //PM
+            for (var i = 1; i <= 12; ++i) {
+                var item = new ScheduleItem("None", i + " PM", defaultPeriodColor);
+                timeTableAppend(item);
+                scheduleItems.push(item);
+            }
         }
-        //PM
-        for (var i = 1; i <= 12; ++i) {
-            var item = new ScheduleItem("None", i + " PM", defaultPeriodColor);
-            timeTableAppend(item);
-            scheduleItems.push(item);
-        }
-        //Save that it has fetched from server
-        electron_1.ipcRenderer.send("data-save", { identifier: fetchFromServerIdentifier, data: true });
-        //-----------------------------
-        //Await document ready before performing startup actions
-        $(function () {
-            refreshScheduleList();
-            refreshPeriodList();
-        });
-    }
-    else {
-        electron_1.ipcRenderer.send("data-retrieve", scheduleItemsIdentifier);
-        electron_1.ipcRenderer.once("data-retrieve-response", function (event, data) {
+        else {
             for (var i = 0; i < data.length; ++i) {
                 scheduleItems.push(new ScheduleItem(data[i].periodName, data[i].hour, data[i].color));
             }
-            electron_1.ipcRenderer.send("data-retrieve", periodItemsIdentifier);
-            electron_1.ipcRenderer.once("data-retrieve-response", function (event, data) {
-                //Clear existing values
-                periodItems = [];
-                for (var i = 0; i < data.length; ++i) {
-                    periodItems.push(new PeriodItem(data[i].name, data[i].color));
-                }
-                //-----------------------------
-                //Await document ready before performing startup actions
-                $(function () {
-                    refreshScheduleList();
-                    refreshPeriodList();
-                });
-            });
-        });
+            //TODO, infer period items based on scheduleItems
+        }
+        //Save that it has fetched from server
+        electron_1.ipcRenderer.send("data-save", { identifier: fetchFromServerIdentifier, data: true });
     }
+    else {
+        //Retrieve ScheduleItems
+        var retrievedScheduleItems = electron_1.ipcRenderer.sendSync("data-retrieve", scheduleItemsIdentifier);
+        for (var i = 0; i < retrievedScheduleItems.length; ++i) {
+            scheduleItems.push(new ScheduleItem(retrievedScheduleItems[i].periodName, retrievedScheduleItems[i].hour, retrievedScheduleItems[i].color));
+        }
+        //Retrieve PeriodItems
+        var retrievedPeriodItems = electron_1.ipcRenderer.sendSync("data-retrieve", periodItemsIdentifier);
+        //Clear existing values
+        periodItems = [];
+        for (var i = 0; i < retrievedPeriodItems.length; ++i) {
+            periodItems.push(new PeriodItem(retrievedPeriodItems[i].name, retrievedPeriodItems[i].color));
+        }
+    }
+    refreshScheduleList();
+    refreshPeriodList();
 });
 //Containers for scheduleItems and periodItems
 var scheduleItemContainer = $("#view-schedule-scheduleItem-container");
@@ -270,6 +270,8 @@ function refreshScheduleList() {
     }
     //Save scheduleItems
     electron_1.ipcRenderer.send("data-save", { identifier: scheduleItemsIdentifier, data: scheduleItems });
+    //send POST to server
+    electron_1.ipcRenderer.send("networking-send", { requestType: RequestTypes_1.RequestType.Post, identifiers: [scheduleItemsIdentifier], data: scheduleItems });
 }
 function refreshPeriodList() {
     periodItemContainer.html(" "); //Clear old text

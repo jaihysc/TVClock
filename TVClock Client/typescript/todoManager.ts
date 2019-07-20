@@ -2,6 +2,7 @@
 //Manager for tasks view
 
 import { ipcRenderer } from "electron";
+import { RequestType } from "./RequestTypes";
 
 //An active task in the task list
 class Task {
@@ -21,42 +22,47 @@ let tasks: Task[] = []; //Collection of tasks
 let selectedTaskIndex = -1; //Index of current selected active task
 
 //-----------------------------
-//Networking retrieve stored tasks
+//Setup
 const tasksIdentifier = "todo-view-tasks"; //Identifier for tasks in persistence storage
+//-----------------------------
+//Networking retrieve stored tasks
+//Wait until the document is ready before running dso the user has something to look at
+$(function() {
+    let fetchedFromServer: boolean = ipcRenderer.sendSync("data-retrieve", "todo-view-fetchedFromServer");
 
-ipcRenderer.send("data-retrieve", "todo-view-fetchedFromServer");
-ipcRenderer.once("data-retrieve-response", (event: any, fetchedFromServer: boolean) => {
+    let data: Task[] = [];
     if (fetchedFromServer == undefined) {
-        //If undefined, it means no fetch has been sent
-        //TODO Send fetch request to server
-        console.log("server fetch request");
+        ipcRenderer.once("main-ready", () => { //main-ready is emitted after a connection is established with the server
+            //If undefined, it means no fetch has been sent to the server
+            if (fetchedFromServer == undefined) {
+                //Send fetch request to server
+                let jsonData = ipcRenderer.sendSync("networking-send", {requestType: RequestType.Get, identifiers: [tasksIdentifier]});
+                data = JSON.parse(jsonData.data[0]);
 
-        //Save that a fetch has already been performed to the server
-        ipcRenderer.send("data-save", {identifier: "todo-view-fetchedFromServer", data: true});
+                //Save that a fetch has already been performed to the server
+                ipcRenderer.send("data-save", {identifier: "todo-view-fetchedFromServer", data: true});
 
-        $(function() {
-            //Updates the appearance of the task list with the data from tasks
-            updateTaskList();
+                if (data != undefined) {
+                    for (let i = 0; i < data.length; ++i) {
+                        //Reconvert date text into date
+                        tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
+                    }
+                }
+
+                //Updates the appearance of the task list with the data from tasks
+                updateTaskList();
+            }
         });
     } else {
         //Retrieve back stored data
-        ipcRenderer.send("data-retrieve", tasksIdentifier);
-        ipcRenderer.once("data-retrieve-response", (event: any, data: Task[]) => {
-            if (data == undefined)
-                return;
+        data = ipcRenderer.sendSync("data-retrieve", tasksIdentifier);
 
-            for (let i = 0; i < data.length; ++i) {
-                //Reconvert date text into date
-                tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
-            }
-
-            //-----------------------------
-            //Wait until the document is ready before running default actions
-            $(function() {
-                //Updates the appearance of the task list with the data from tasks
-                updateTaskList();
-            });
-        });
+        for (let i = 0; i < data.length; ++i) {
+            //Reconvert date text into date
+            tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
+        }
+        //Updates the appearance of the task list with the data from tasks
+        updateTaskList();
     }
 });
 
@@ -246,4 +252,6 @@ function updateTaskList() {
 
     //Save task data to persistent
     ipcRenderer.send("data-save", {identifier: tasksIdentifier, data: tasks});
+    //Send POST to server
+    ipcRenderer.send("networking-send", {requestType: RequestType.Post, identifiers: [tasksIdentifier], data: tasks});
 }

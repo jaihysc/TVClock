@@ -3,6 +3,7 @@
 
 import { ipcRenderer } from "electron";
 import invert, { RGB, RgbArray, HexColor, BlackWhite } from "invert-color";
+import {RequestType} from "./RequestTypes";
 
 class ScheduleItem {
     periodName: string;
@@ -27,72 +28,72 @@ class PeriodItem {
     }
 }
 
+//--------------------------
+//Setup
 //List of all 24 scheduleItems
 let scheduleItems: ScheduleItem[] = [];
 let periodItems: PeriodItem[] = [];
+
 const defaultPeriodColor = "464646";
 periodItems.push(new PeriodItem("None", defaultPeriodColor)); //Push a single default period item
 
-//-----------------------------
-//Networking and data
 const scheduleItemsIdentifier = "schedule-view-scheduleItems";
 const periodItemsIdentifier = "schedule-view-periodItems";
-const fetchFromServerIdentifier = "schedule-view-fetchedFromServer";
 
-ipcRenderer.send("data-retrieve", fetchFromServerIdentifier);
-ipcRenderer.once("data-retrieve-response", (event: any, fetchedFromServer: boolean) => {
+//-----------------------------
+//Networking and data
+//Await document ready before performing startup actions
+$(function() {
+    const fetchFromServerIdentifier = "schedule-view-fetchedFromServer";
+
+    let fetchedFromServer: boolean = ipcRenderer.sendSync("data-retrieve", fetchFromServerIdentifier);
     if (!fetchedFromServer) {
-        //Todo, fetch from server
-        console.log("server fetch");
+        let jsonData = ipcRenderer.sendSync("networking-send", {requestType: RequestType.Get, identifiers: [scheduleItemsIdentifier]});
+        let data = JSON.parse(jsonData.data[0]);
 
-        //Generate default schedule list
-        //AM
-        for (let i = 1; i <= 12; ++i) {
-            let item = new ScheduleItem("None", i + " AM", defaultPeriodColor);
-            timeTableAppend(item); //None is default period name
-            scheduleItems.push(item);
-        }
-        //PM
-        for (let i = 1; i <= 12; ++i) {
-            let item = new ScheduleItem("None", i + " PM", defaultPeriodColor);
-            timeTableAppend(item);
-            scheduleItems.push(item);
-        }
-
-        //Save that it has fetched from server
-        ipcRenderer.send("data-save", {identifier: fetchFromServerIdentifier, data: true});
-
-        //-----------------------------
-        //Await document ready before performing startup actions
-        $(function() {
-            refreshScheduleList();
-            refreshPeriodList();
-        });
-    } else {
-        ipcRenderer.send("data-retrieve", scheduleItemsIdentifier);
-        ipcRenderer.once("data-retrieve-response", (event: any, data: ScheduleItem[]) => {
+        //Generate default schedule list if not defined by the server
+        if (data == undefined) {
+            //AM
+            for (let i = 1; i <= 12; ++i) {
+                let item = new ScheduleItem("None", i + " AM", defaultPeriodColor);
+                timeTableAppend(item); //None is default period name
+                scheduleItems.push(item);
+            }
+            //PM
+            for (let i = 1; i <= 12; ++i) {
+                let item = new ScheduleItem("None", i + " PM", defaultPeriodColor);
+                timeTableAppend(item);
+                scheduleItems.push(item);
+            }
+        } else {
             for (let i = 0; i < data.length; ++i) {
                 scheduleItems.push(new ScheduleItem(data[i].periodName, data[i].hour, data[i].color))
             }
 
-            ipcRenderer.send("data-retrieve", periodItemsIdentifier);
-            ipcRenderer.once("data-retrieve-response", (event: any, data: PeriodItem[]) => {
-                //Clear existing values
-                periodItems = [];
+            //TODO, infer period items based on scheduleItems
+        }
 
-                for (let i = 0; i < data.length; ++i) {
-                    periodItems.push(new PeriodItem(data[i].name, data[i].color))
-                }
+        //Save that it has fetched from server
+        ipcRenderer.send("data-save", {identifier: fetchFromServerIdentifier, data: true});
+    } else {
+        //Retrieve ScheduleItems
+        let retrievedScheduleItems: ScheduleItem[] = ipcRenderer.sendSync("data-retrieve", scheduleItemsIdentifier);
+        for (let i = 0; i < retrievedScheduleItems.length; ++i) {
+            scheduleItems.push(new ScheduleItem(retrievedScheduleItems[i].periodName, retrievedScheduleItems[i].hour, retrievedScheduleItems[i].color))
+        }
 
-                //-----------------------------
-                //Await document ready before performing startup actions
-                $(function() {
-                    refreshScheduleList();
-                    refreshPeriodList();
-                });
-            });
-        });
+        //Retrieve PeriodItems
+        let retrievedPeriodItems: PeriodItem[] = ipcRenderer.sendSync("data-retrieve", periodItemsIdentifier);
+        //Clear existing values
+        periodItems = [];
+
+        for (let i = 0; i < retrievedPeriodItems.length; ++i) {
+            periodItems.push(new PeriodItem(retrievedPeriodItems[i].name, retrievedPeriodItems[i].color))
+        }
     }
+
+    refreshScheduleList();
+    refreshPeriodList();
 });
 
 //Containers for scheduleItems and periodItems
@@ -320,6 +321,8 @@ function refreshScheduleList() {
 
     //Save scheduleItems
     ipcRenderer.send("data-save", {identifier: scheduleItemsIdentifier, data: scheduleItems});
+    //send POST to server
+    ipcRenderer.send("networking-send", {requestType: RequestType.Post, identifiers: [scheduleItemsIdentifier], data: scheduleItems});
 }
 
 function refreshPeriodList() {

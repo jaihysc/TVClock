@@ -32,16 +32,16 @@ ipcMain.on("data-retrieve", (event: any, identifier: string) => {
 
     //Send back an undefined response if it failed to find a node
     if (foundNode == undefined) {
-        event.reply("data-retrieve-response", undefined);
+        event.returnValue = undefined;
         return;
     }
 
     if (foundNode.identifier != identifier) {
-        event.reply("data-retrieve-response", undefined);
+        event.returnValue = undefined;
         return;
     }
 
-    event.reply("data-retrieve-response", foundNode.data);
+    event.returnValue = foundNode.data;
 });
 
 //Searches for the identifier Returns null if there is no match

@@ -83,7 +83,7 @@ public class DocsFacade {
             return text.toString();
 
         } catch (Exception e) {
-            System.out.println("DOCSFACADE | Error fetching document");
+            System.out.println("DocsFacade | Error fetching document");
             return "Error fetching notices";
         }
     }

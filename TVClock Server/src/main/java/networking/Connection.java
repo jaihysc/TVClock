@@ -69,9 +69,9 @@ public class Connection implements IConnectionListeners {
                         logMessage("Received message: " + receivedMessage);
 
                         try {
-                            handler.handleMessage(gson.fromJson(receivedMessage, Packet.class));
+                            handler.handleMessage(gson.fromJson(receivedMessage, Packet.class), this);
                         } catch (Exception e) {
-                            logMessage("Error occurred handling received message");
+                            logMessage("Error occurred handling received message: " + e.getLocalizedMessage());
                         }
                     } else {
                         //Also terminate the thread if the received message is a null, which is assumed to be that the
@@ -81,7 +81,7 @@ public class Connection implements IConnectionListeners {
                         break;
                     }
 
-                    Thread.sleep(5000);
+                    Thread.sleep(100);
                 } catch (InterruptedException ex) {
                     logMessage("Error getting message");
 

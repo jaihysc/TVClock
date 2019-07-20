@@ -18,7 +18,7 @@ public class TaskListManager {
      */
     public static String wrapText(String text, int wrapCharacter) {
         int substringBeginIndex = 0;
-        int offset = 0;
+        int offset = 0; //How far to skip the line count, if another line was broken into the next line
         StringBuilder returnText = new StringBuilder();
         for (int j = wrapCharacter; j < text.length(); j+=wrapCharacter) {
             int i = j - offset;
@@ -46,7 +46,8 @@ public class TaskListManager {
                 //Skip any leading whitespace
                 while (text.charAt(i) == ' ') {
                     i++;
-                    offset--;
+                    if (offset > 0)
+                        offset--;
                 }
             }
 

@@ -3,8 +3,17 @@ package taskList;
 import java.util.Date;
 
 public class TaskItem {
-    public String taskMessage;
-    public TaskItemSeverity taskItemSeverity;
-    public Date createDate; //Date which it was created on a client
-    public Date expiraryDate; //Date where the task item auto deletes
+    public String text;
+    /**
+     * Currently not supported
+     */
+    public String color;
+    /**
+     * Date which the task starts
+     */
+    public Date startDate;
+    /**
+     * Date which the task auto deletes
+     */
+    public Date endDate;
 }

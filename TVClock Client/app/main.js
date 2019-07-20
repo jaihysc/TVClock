@@ -103,18 +103,55 @@ electron_1.app.on("activate", function () { return __awaiter(_this, void 0, void
         }
     });
 }); });
-//Networking settings
-var networkingConfig = /** @class */ (function () {
-    function networkingConfig() {
+//---------------------------------
+//Networking
+//Handles communication between the client and server
+//Class to serialize / deserialize responses to and from the server
+var NetworkingPacket = /** @class */ (function () {
+    function NetworkingPacket(requestType, data, dataIdentifiers, timestamp, id) {
+        this.requestType = requestType;
+        this.data = data;
+        this.dataIdentifiers = dataIdentifiers;
+        this.timestamp = timestamp;
+        this.id = id;
+    }
+    return NetworkingPacket;
+}());
+var NetworkingConfig = /** @class */ (function () {
+    function NetworkingConfig() {
         this.hostname = "localhost";
         this.port = 4999;
     }
-    return networkingConfig;
+    return NetworkingConfig;
 }());
-var networkConfig = new networkingConfig();
+var networkConfig = new NetworkingConfig();
+var networkingQueuedRequests = [];
+var networkingId = 0;
 function initNetworking() {
-    networkClient.on("data", function (data) {
-        console.log("Networking | Received: " + data);
+    networkClient.on("data", function (response) {
+        console.log("Networking | Received: " + response);
+        var returnedPacket;
+        try {
+            returnedPacket = JSON.parse(response.toString());
+        }
+        catch (e) {
+            console.log("Networking | Error handling received message: " + e);
+            return;
+        }
+        var foundId = false;
+        //Find event matching returnedVal id
+        for (var i = 0; i < networkingQueuedRequests.length; ++i) {
+            if (networkingQueuedRequests[i].id === returnedPacket.id) {
+                //Return deserialized server response to caller
+                //Note the data is still in json as it is stored in a string array
+                networkingQueuedRequests[i].event.returnValue = { identifiers: returnedPacket.dataIdentifiers, data: returnedPacket.data };
+                networkingQueuedRequests.splice(i, 1); //Remove networkingRequests element after fulfilling request
+                foundId = true;
+                break;
+            }
+        }
+        if (!foundId)
+            console.log("Networking | Received packet with no matching id - Ignoring");
     });
     networkClient.on("close", function () {
         mainWindow.webContents.send("networking-status", "disconnected");
@@ -122,6 +159,11 @@ function initNetworking() {
     });
     networkClient.on("error", function (error) {
         console.log("Networking | " + error);
+        //Return null to all networking-send events
+        networkingQueuedRequests.forEach(function (value) {
+            value.event.returnValue = null;
+        });
+        networkingQueuedRequests = []; //clear queued requests
         mainWindow.webContents.send("networking-status", "disconnected");
     });
     //Start networking
@@ -131,9 +173,19 @@ function initNetworking() {
         console.log("Networking | Attempting to reconnect");
         networkConnect();
     });
-    electron_2.ipcMain.on("networking-send", function (event, arg) {
-        console.log("Networking | Sent: " + arg);
-        networkSend(arg);
+    //Sends specified identifiers with RequestType and returns the response
+    electron_2.ipcMain.on("networking-send", function (event, args) {
+        var id = networkingId++;
+        var dataJson = [];
+        //Serialize data into string arrays first
+        if (args.data != undefined) {
+            dataJson.push(JSON.stringify(args.data));
+        }
+        var packet = new NetworkingPacket(args.requestType, dataJson, args.identifiers, Date.now(), id);
+        //Log the return event in an array for a data reply
+        networkingQueuedRequests.push({ id: id, event: event });
+        //Serialize into json string and send it to the server
+        networkSend(JSON.stringify(packet));
     });
     //Allow for changing of port + hostname
     electron_2.ipcMain.on("networking-info-modify", function (event, arg) {
@@ -156,11 +208,14 @@ function networkConnect() {
     networkClient.connect(networkConfig.port, networkConfig.hostname, function () {
         //connection established
         mainWindow.webContents.send("networking-status", "connected");
+        mainWindow.webContents.send("main-ready"); //Inform that network is established
         console.log("Networking | Connection established");
     });
 }
 function networkSend(str) {
-    networkClient.write(str + "\r\n"); //Make sure to include \r\n so the server recognises it as a message
+    return networkClient.write(str + "\r\n", function () {
+        console.log("Networking | Sent: " + str);
+    });
 }
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.

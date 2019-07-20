@@ -1,5 +1,7 @@
 import { app, BrowserWindow } from "electron";
 import { ipcMain } from "electron";
+import { RequestType } from "./RequestTypes";
+import {domainToASCII} from "url";
 
 let mainWindow: BrowserWindow;
 
@@ -63,17 +65,64 @@ app.on("activate", async () => {
     }
 });
 
-//Networking settings
-class networkingConfig {
+//---------------------------------
+//Networking
+//Handles communication between the client and server
+
+//Class to serialize / deserialize responses to and from the server
+class NetworkingPacket {
+    requestType: String | undefined;
+    data: string[] | undefined;
+    dataIdentifiers: string[] | undefined;
+    timestamp: number | undefined;
+    id: number; //Used for identifying the response, which will be on the same id
+
+    constructor(requestType: RequestType, data: string[], dataIdentifiers: string[], timestamp: number, id: number) {
+        this.requestType = requestType;
+        this.data = data;
+        this.dataIdentifiers = dataIdentifiers;
+        this.timestamp = timestamp;
+        this.id = id;
+    }
+}
+
+class NetworkingConfig {
     hostname: string = "localhost";
     port: number = 4999;
 }
 
-let networkConfig = new networkingConfig();
+let networkConfig = new NetworkingConfig();
+let networkingQueuedRequests: {id: number; event: any}[] = [];
+let networkingId: number = 0;
 
 function initNetworking() {
-    networkClient.on("data", function(data: Buffer) {
-        console.log("Networking | Received: " + data);
+    networkClient.on("data", function(response: Buffer) {
+        console.log("Networking | Received: " + response);
+        let returnedPacket: NetworkingPacket;
+        try {
+            returnedPacket = JSON.parse(response.toString());
+
+        } catch (e) {
+            console.log("Networking | Error handling received message: " + e);
+            return;
+        }
+
+        let foundId = false;
+        //Find event matching returnedVal id
+        for (let i = 0; i < networkingQueuedRequests.length; ++i) {
+            if (networkingQueuedRequests[i].id === returnedPacket.id) {
+                //Return deserialized server response to caller
+                //Note the data is still in json as it is stored in a string array
+                networkingQueuedRequests[i].event.returnValue = {identifiers: returnedPacket.dataIdentifiers, data: returnedPacket.data};
+
+                networkingQueuedRequests.splice(i, 1); //Remove networkingRequests element after fulfilling request
+                foundId = true;
+                break;
+            }
+        }
+
+        if (!foundId)
+            console.log("Networking | Received packet with no matching id - Ignoring");
     });
 
     networkClient.on("close", function() {
@@ -83,6 +132,13 @@ function initNetworking() {
 
     networkClient.on("error", (error: string) => {
         console.log("Networking | " + error);
+
+        //Return null to all networking-send events
+        networkingQueuedRequests.forEach(value => {
+            value.event.returnValue = null;
+        });
+        networkingQueuedRequests = []; //clear queued requests
+
         mainWindow.webContents.send("networking-status", "disconnected");
     });
 
@@ -94,9 +150,24 @@ function initNetworking() {
         console.log("Networking | Attempting to reconnect");
         networkConnect();
     });
-    ipcMain.on("networking-send", (event: any, arg: string) => {
-        console.log("Networking | Sent: "+ arg);
-        networkSend(arg);
+
+    //Sends specified identifiers with RequestType and returns the response
+    ipcMain.on("networking-send", (event: any, args: { requestType: RequestType; identifiers: any[]; data: any[]}) => {
+        let id = networkingId++;
+
+        let dataJson: string[] = [];
+        //Serialize data into string arrays first
+        if (args.data != undefined) {
+            dataJson.push(JSON.stringify(args.data));
+        }
+
+        let packet = new NetworkingPacket(args.requestType, dataJson, args.identifiers, Date.now(), id);
+
+        //Log the return event in an array for a data reply
+        networkingQueuedRequests.push({id: id, event: event});
+
+        //Serialize into json string and send it to the server
+        networkSend(JSON.stringify(packet));
     });
 
     //Allow for changing of port + hostname
@@ -125,12 +196,15 @@ function networkConnect() {
         //connection established
         mainWindow.webContents.send("networking-status", "connected");
 
+        mainWindow.webContents.send("main-ready"); //Inform that network is established
         console.log("Networking | Connection established");
     });
 }
 
 function networkSend(str: string) {
-    networkClient.write(str + "\r\n"); //Make sure to include \r\n so the server recognises it as a message
+    return networkClient.write(str + "\r\n", () => { //Make sure to include \r\n so the server recognises it as a message
+        console.log("Networking | Sent: " + str);
+    });
 }
 
 

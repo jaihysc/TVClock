@@ -3,6 +3,7 @@
 //Manager for tasks view
 Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
+var RequestTypes_1 = require("./RequestTypes");
 //An active task in the task list
 var Task = /** @class */ (function () {
     function Task(text, startDate, endDate) {
@@ -19,38 +20,43 @@ var taskList = $("#active-tasks-list");
 var tasks = []; //Collection of tasks
 var selectedTaskIndex = -1; //Index of current selected active task
 //-----------------------------
-//Networking retrieve stored tasks
+//Setup
 var tasksIdentifier = "todo-view-tasks"; //Identifier for tasks in persistence storage
-electron_1.ipcRenderer.send("data-retrieve", "todo-view-fetchedFromServer");
-electron_1.ipcRenderer.once("data-retrieve-response", function (event, fetchedFromServer) {
+//-----------------------------
+//Networking retrieve stored tasks
+//Wait until the document is ready before running dso the user has something to look at
+$(function () {
+    var fetchedFromServer = electron_1.ipcRenderer.sendSync("data-retrieve", "todo-view-fetchedFromServer");
+    var data = [];
     if (fetchedFromServer == undefined) {
-        //If undefined, it means no fetch has been sent
-        //TODO Send fetch request to server
-        console.log("server fetch request");
-        //Save that a fetch has already been performed to the server
-        electron_1.ipcRenderer.send("data-save", { identifier: "todo-view-fetchedFromServer", data: true });
-        $(function () {
-            //Updates the appearance of the task list with the data from tasks
-            updateTaskList();
+        electron_1.ipcRenderer.once("main-ready", function () {
+            //If undefined, it means no fetch has been sent to the server
+            if (fetchedFromServer == undefined) {
+                //Send fetch request to server
+                var jsonData = electron_1.ipcRenderer.sendSync("networking-send", { requestType: RequestTypes_1.RequestType.Get, identifiers: [tasksIdentifier] });
+                data = JSON.parse(jsonData.data[0]);
+                //Save that a fetch has already been performed to the server
+                electron_1.ipcRenderer.send("data-save", { identifier: "todo-view-fetchedFromServer", data: true });
+                if (data != undefined) {
+                    for (var i = 0; i < data.length; ++i) {
+                        //Reconvert date text into date
+                        tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
+                    }
+                }
+                //Updates the appearance of the task list with the data from tasks
+                updateTaskList();
+            }
         });
     }
     else {
         //Retrieve back stored data
-        electron_1.ipcRenderer.send("data-retrieve", tasksIdentifier);
-        electron_1.ipcRenderer.once("data-retrieve-response", function (event, data) {
-            if (data == undefined)
-                return;
-            for (var i = 0; i < data.length; ++i) {
-                //Reconvert date text into date
-                tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
-            }
-            //-----------------------------
-            //Wait until the document is ready before running default actions
-            $(function () {
-                //Updates the appearance of the task list with the data from tasks
-                updateTaskList();
-            });
-        });
+        data = electron_1.ipcRenderer.sendSync("data-retrieve", tasksIdentifier);
+        for (var i = 0; i < data.length; ++i) {
+            //Reconvert date text into date
+            tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
+        }
+        //Updates the appearance of the task list with the data from tasks
+        updateTaskList();
     }
 });
 //-----------------------------
@@ -215,4 +221,6 @@ function updateTaskList() {
     }
     //Save task data to persistent
     electron_1.ipcRenderer.send("data-save", { identifier: tasksIdentifier, data: tasks });
+    //Send POST to server
+    electron_1.ipcRenderer.send("networking-send", { requestType: RequestTypes_1.RequestType.Post, identifiers: [tasksIdentifier], data: tasks });
 }

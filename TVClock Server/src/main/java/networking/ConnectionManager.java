@@ -38,7 +38,6 @@ public class ConnectionManager {
                             synchronizedConnections.add(new Connection(socket, messageHandler, id++));
                         }
 
-                        sendMessage("Hey bud"); //TODO, remove, this is for testing
                     } catch (IOException e) {
                         System.out.println("Networking | Error creating connection thread");
                     }
@@ -53,7 +52,7 @@ public class ConnectionManager {
      * Sends the specified message to all connected clients
      * @param message message to send
      */
-    private static void sendMessage(String message) {
+    public static void sendMessage(String message) {
         trimConnections();
 
         for (IConnectionListeners connection : connections)
