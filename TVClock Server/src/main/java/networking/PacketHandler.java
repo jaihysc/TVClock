@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import networking.models.IMessageReceived;
 import networking.models.Packet;
 import networking.models.RequestType;
-import scheduleList.ScheduleItem;
+import scheduleList.ScheduleItemGeneric;
 import storage.ApplicationData;
 import storage.ApplicationDataIdentifiers;
 import taskList.TaskItem;
@@ -22,13 +22,18 @@ public class PacketHandler implements IMessageReceived {
      */
     @Override
     public void handleMessage(Packet receivedPacket, Connection connection) {
+        Gson gson = new Gson();
+
         switch (receivedPacket.requestType) {
             case Post: //POST request from client
                 for (int i = 0; i < receivedPacket.data.length; ++i) {
                     updateData(receivedPacket.dataIdentifiers[i], receivedPacket.data[i]);
                 }
 
-                //TODO, send UPDATE out to all clients
+                //send UPDATE out to all clients
+                Packet updatePacket = new Packet(RequestType.Update, receivedPacket.data, receivedPacket.dataIdentifiers);
+                ConnectionManager.sendMessage(gson.toJson(updatePacket, Packet.class));
+
                 break;
 
             case Get: //GET request from client
@@ -36,15 +41,9 @@ public class PacketHandler implements IMessageReceived {
                 for (String identifier : receivedPacket.dataIdentifiers) {
                     returnData.add(retrieveDataJson(identifier));
                 }
-                Packet returnPacket = new Packet();
+                Packet returnPacket = new Packet(
+                        RequestType.Response, returnData.toArray(new String[0]), receivedPacket.dataIdentifiers, receivedPacket.id);
 
-                returnPacket.requestType = RequestType.Response;
-                returnPacket.dataIdentifiers = receivedPacket.dataIdentifiers;
-                returnPacket.data = returnData.toArray(new String[0]);
-                returnPacket.id = receivedPacket.id;
-                returnPacket.timestamp = System.currentTimeMillis() / 1000L;
-
-                Gson gson = new Gson();
                 connection.sendMessage(gson.toJson(returnPacket, Packet.class));
                 break;
         }
@@ -65,6 +64,8 @@ public class PacketHandler implements IMessageReceived {
             case ApplicationDataIdentifiers.scheduleItems:
                 return gson.toJson(ApplicationData.scheduleItems, TaskItem[].class);
 
+            case ApplicationDataIdentifiers.periodItems:
+                return gson.toJson(ApplicationData.periodItems, TaskItem[].class);
         }
 
         return null;
@@ -79,12 +80,15 @@ public class PacketHandler implements IMessageReceived {
         Gson gson = new Gson();
         switch (identifier) {
             case ApplicationDataIdentifiers.taskItems:
-                var opaa = gson.fromJson(json, TaskItem[].class);
-                ApplicationData.taskItems = opaa;
+                ApplicationData.taskItems = gson.fromJson(json, TaskItem[].class);;
                 break;
 
             case ApplicationDataIdentifiers.scheduleItems:
-                ApplicationData.scheduleItems = gson.fromJson(json, ScheduleItem[].class);
+                ApplicationData.scheduleItems = gson.fromJson(json, ScheduleItemGeneric[].class);
+                break;
+
+            case ApplicationDataIdentifiers.periodItems:
+                ApplicationData.periodItems = gson.fromJson(json, ScheduleItemGeneric[].class);
                 break;
         }
     }

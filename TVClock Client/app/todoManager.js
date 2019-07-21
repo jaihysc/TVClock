@@ -26,38 +26,30 @@ var tasksIdentifier = "todo-view-tasks"; //Identifier for tasks in persistence s
 //Networking retrieve stored tasks
 //Wait until the document is ready before running dso the user has something to look at
 $(function () {
-    var fetchedFromServer = electron_1.ipcRenderer.sendSync("data-retrieve", "todo-view-fetchedFromServer");
+    var fetchedFromServer = electron_1.ipcRenderer.sendSync(RequestTypes_1.LocalStorageOperation.Fetch, "todo-view-fetchedFromServer");
     var data = [];
     if (fetchedFromServer == undefined) {
         electron_1.ipcRenderer.once("main-ready", function () {
             //If undefined, it means no fetch has been sent to the server
             if (fetchedFromServer == undefined) {
                 //Send fetch request to server
-                var jsonData = electron_1.ipcRenderer.sendSync("networking-send", { requestType: RequestTypes_1.RequestType.Get, identifiers: [tasksIdentifier] });
+                var jsonData = electron_1.ipcRenderer.sendSync(RequestTypes_1.NetworkOperation.Send, { requestType: RequestTypes_1.RequestType.Get, identifiers: [tasksIdentifier] });
                 data = JSON.parse(jsonData.data[0]);
                 //Save that a fetch has already been performed to the server
-                electron_1.ipcRenderer.send("data-save", { identifier: "todo-view-fetchedFromServer", data: true });
-                if (data != undefined) {
-                    for (var i = 0; i < data.length; ++i) {
-                        //Reconvert date text into date
-                        tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
-                    }
-                }
-                //Updates the appearance of the task list with the data from tasks
-                updateTaskList();
+                electron_1.ipcRenderer.send(RequestTypes_1.LocalStorageOperation.Save, { identifier: "todo-view-fetchedFromServer", data: true });
+                updateTasks(data, false);
             }
         });
     }
     else {
-        //Retrieve back stored data
-        data = electron_1.ipcRenderer.sendSync("data-retrieve", tasksIdentifier);
-        for (var i = 0; i < data.length; ++i) {
-            //Reconvert date text into date
-            tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
-        }
-        //Updates the appearance of the task list with the data from tasks
-        updateTaskList();
+        //Retrieve back stored data from localstorage
+        data = electron_1.ipcRenderer.sendSync(RequestTypes_1.LocalStorageOperation.Fetch, tasksIdentifier);
+        updateTasks(data, false);
     }
+    //Set up update request handler
+    electron_1.ipcRenderer.on(tasksIdentifier + "-update", function (event, data) {
+        updateTasks(JSON.parse(data), false);
+    });
 });
 //-----------------------------
 //UI logic
@@ -110,7 +102,7 @@ addTaskBtn.on("click", function () {
     }
     wipeInputFields();
     //Refresh task list to include changes
-    updateTaskList();
+    updateTaskList(true);
 });
 //Edit and remove button functionality
 editTaskBtn.on("click", function () {
@@ -153,10 +145,21 @@ removeTaskBtn.on("click", function () {
     else if (selectedTaskIndex >= tasks.length) { //If user selected last task
         selectedTaskIndex -= 1;
     }
-    updateTaskList();
+    updateTaskList(true);
 });
 //-----------------------------
 //Functions
+function updateTasks(data, sendServerPost) {
+    tasks = []; //Clear tasks first
+    if (data != undefined) {
+        for (var i = 0; i < data.length; ++i) {
+            //Reconvert date text into date
+            tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
+        }
+    }
+    //Updates the appearance of the task list with the data from tasks
+    updateTaskList(sendServerPost);
+}
 function wipeInputFields() {
     newTaskText.val("");
     newTaskStartDate.val("");
@@ -166,7 +169,7 @@ function toFullDateString(date) {
     return date.toDateString() + " " + date.getHours() + ":" + date.getMinutes();
 }
 //Injects html into the list for elements to appear on screen, saves task data to persistent
-function updateTaskList() {
+function updateTaskList(sendServerPost) {
     taskList.html(""); //Clear old contents first
     for (var i = 0; i < tasks.length; ++i) {
         //Inject each task into the html after sanitizing it
@@ -220,7 +223,8 @@ function updateTaskList() {
         taskListItems[selectedTaskIndex].classList.remove("list-group-item-darker");
     }
     //Save task data to persistent
-    electron_1.ipcRenderer.send("data-save", { identifier: tasksIdentifier, data: tasks });
+    electron_1.ipcRenderer.send(RequestTypes_1.LocalStorageOperation.Save, { identifier: tasksIdentifier, data: tasks });
     //Send POST to server
-    electron_1.ipcRenderer.send("networking-send", { requestType: RequestTypes_1.RequestType.Post, identifiers: [tasksIdentifier], data: tasks });
+    if (sendServerPost)
+        electron_1.ipcRenderer.send(RequestTypes_1.NetworkOperation.Send, { requestType: RequestTypes_1.RequestType.Post, identifiers: [tasksIdentifier], data: tasks });
 }

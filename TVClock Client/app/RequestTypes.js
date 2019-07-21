@@ -7,3 +7,12 @@ var RequestType;
     RequestType["Post"] = "Post";
     RequestType["Update"] = "Update";
 })(RequestType = exports.RequestType || (exports.RequestType = {}));
+var NetworkOperation;
+(function (NetworkOperation) {
+    NetworkOperation["Send"] = "networking-send";
+})(NetworkOperation = exports.NetworkOperation || (exports.NetworkOperation = {}));
+var LocalStorageOperation;
+(function (LocalStorageOperation) {
+    LocalStorageOperation["Save"] = "data-save";
+    LocalStorageOperation["Fetch"] = "data-retrieve"; //Fetch from local storage
+})(LocalStorageOperation = exports.LocalStorageOperation || (exports.LocalStorageOperation = {}));

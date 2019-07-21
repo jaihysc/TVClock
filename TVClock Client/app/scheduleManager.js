@@ -8,20 +8,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
 var invert_color_1 = __importDefault(require("invert-color"));
 var RequestTypes_1 = require("./RequestTypes");
-var ScheduleItem = /** @class */ (function () {
-    function ScheduleItem(periodName, hour, color) {
+var ScheduleItemGeneric = /** @class */ (function () {
+    function ScheduleItemGeneric(periodName, hour, color) {
         this.periodName = periodName;
         this.hour = hour;
         this.color = color;
     }
-    return ScheduleItem;
-}());
-var PeriodItem = /** @class */ (function () {
-    function PeriodItem(name, color) {
-        this.name = name;
-        this.color = color;
-    }
-    return PeriodItem;
+    return ScheduleItemGeneric;
 }());
 //--------------------------
 //Setup
@@ -29,7 +22,6 @@ var PeriodItem = /** @class */ (function () {
 var scheduleItems = [];
 var periodItems = [];
 var defaultPeriodColor = "464646";
-periodItems.push(new PeriodItem("None", defaultPeriodColor)); //Push a single default period item
 var scheduleItemsIdentifier = "schedule-view-scheduleItems";
 var periodItemsIdentifier = "schedule-view-periodItems";
 //-----------------------------
@@ -37,50 +29,55 @@ var periodItemsIdentifier = "schedule-view-periodItems";
 //Await document ready before performing startup actions
 $(function () {
     var fetchFromServerIdentifier = "schedule-view-fetchedFromServer";
-    var fetchedFromServer = electron_1.ipcRenderer.sendSync("data-retrieve", fetchFromServerIdentifier);
+    var fetchedFromServer = electron_1.ipcRenderer.sendSync(RequestTypes_1.LocalStorageOperation.Fetch, fetchFromServerIdentifier);
     if (!fetchedFromServer) {
-        var jsonData = electron_1.ipcRenderer.sendSync("networking-send", { requestType: RequestTypes_1.RequestType.Get, identifiers: [scheduleItemsIdentifier] });
-        var data = JSON.parse(jsonData.data[0]);
+        var retrievedScheduleIData = electron_1.ipcRenderer.sendSync(RequestTypes_1.NetworkOperation.Send, { requestType: RequestTypes_1.RequestType.Get, identifiers: [scheduleItemsIdentifier] });
+        var retrievedPeriodData = electron_1.ipcRenderer.sendSync(RequestTypes_1.NetworkOperation.Send, { requestType: RequestTypes_1.RequestType.Get, identifiers: [periodItemsIdentifier] });
+        var scheduleData = void 0;
+        var periodData = void 0;
         //Generate default schedule list if not defined by the server
-        if (data == undefined) {
+        if (retrievedScheduleIData == undefined || retrievedScheduleIData.data == undefined || (scheduleData = JSON.parse(retrievedScheduleIData.data[0])) == undefined ||
+            retrievedPeriodData == undefined || retrievedPeriodData.data == undefined || (periodData = JSON.parse(retrievedPeriodData.data[0])) == undefined) {
             //AM
             for (var i = 1; i <= 12; ++i) {
-                var item = new ScheduleItem("None", i + " AM", defaultPeriodColor);
+                var item = new ScheduleItemGeneric("None", i + " AM", defaultPeriodColor);
                 timeTableAppend(item); //None is default period name
                 scheduleItems.push(item);
             }
             //PM
             for (var i = 1; i <= 12; ++i) {
-                var item = new ScheduleItem("None", i + " PM", defaultPeriodColor);
+                var item = new ScheduleItemGeneric("None", i + " PM", defaultPeriodColor);
                 timeTableAppend(item);
                 scheduleItems.push(item);
             }
+            //Push a single default period item
+            periodItems.push(new ScheduleItemGeneric("None", null, defaultPeriodColor));
+            refreshScheduleList(true);
+            refreshPeriodList(true);
         }
         else {
-            for (var i = 0; i < data.length; ++i) {
-                scheduleItems.push(new ScheduleItem(data[i].periodName, data[i].hour, data[i].color));
-            }
-            //TODO, infer period items based on scheduleItems
+            //Schedule list already exists on server
+            updateScheduleItems(scheduleData, false);
+            updatePeriodItems(periodData, false);
         }
         //Save that it has fetched from server
-        electron_1.ipcRenderer.send("data-save", { identifier: fetchFromServerIdentifier, data: true });
+        electron_1.ipcRenderer.send(RequestTypes_1.LocalStorageOperation.Save, { identifier: fetchFromServerIdentifier, data: true });
     }
     else {
+        //Retrieved from localstorage
         //Retrieve ScheduleItems
-        var retrievedScheduleItems = electron_1.ipcRenderer.sendSync("data-retrieve", scheduleItemsIdentifier);
-        for (var i = 0; i < retrievedScheduleItems.length; ++i) {
-            scheduleItems.push(new ScheduleItem(retrievedScheduleItems[i].periodName, retrievedScheduleItems[i].hour, retrievedScheduleItems[i].color));
-        }
+        var retrievedScheduleItems = electron_1.ipcRenderer.sendSync(RequestTypes_1.LocalStorageOperation.Fetch, scheduleItemsIdentifier);
+        updateScheduleItems(retrievedScheduleItems, false);
         //Retrieve PeriodItems
-        var retrievedPeriodItems = electron_1.ipcRenderer.sendSync("data-retrieve", periodItemsIdentifier);
-        //Clear existing values
-        periodItems = [];
-        for (var i = 0; i < retrievedPeriodItems.length; ++i) {
-            periodItems.push(new PeriodItem(retrievedPeriodItems[i].name, retrievedPeriodItems[i].color));
-        }
+        var retrievedPeriodItems = electron_1.ipcRenderer.sendSync(RequestTypes_1.LocalStorageOperation.Fetch, periodItemsIdentifier);
+        updatePeriodItems(retrievedPeriodItems, false);
     }
-    refreshScheduleList();
-    refreshPeriodList();
+    electron_1.ipcRenderer.on(scheduleItemsIdentifier + "-update", function (event, data) {
+        updateScheduleItems(JSON.parse(data), false);
+    });
+    electron_1.ipcRenderer.on(periodItemsIdentifier + "-update", function (event, data) {
+        updatePeriodItems(JSON.parse(data), false);
+    });
 });
 //Containers for scheduleItems and periodItems
 var scheduleItemContainer = $("#view-schedule-scheduleItem-container");
@@ -111,8 +108,8 @@ addButton.on("click", function () {
     }
     //Check for duplicates
     for (var i = 0; i < periodItems.length; ++i) {
-        if (periodItems[i].name == textInput) {
-            if (editingPeriod && periodItems[selectedPeriodItemIndex].name == textInput) //Do not count itself as duplicate when editing
+        if (periodItems[i].periodName == textInput) {
+            if (editingPeriod && periodItems[selectedPeriodItemIndex].periodName == textInput) //Do not count itself as duplicate when editing
                 continue;
             errorText.html("Period already exists");
             errorText.show();
@@ -124,21 +121,21 @@ addButton.on("click", function () {
     if (editingPeriod) {
         //Rename all scheduleItems with the name to the new name, change color to new color
         for (var i = 0; i < scheduleItems.length; ++i) {
-            if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].name) {
+            if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].periodName) {
                 scheduleItems[i].periodName = textInput;
                 scheduleItems[i].color = String(inputColorElement.val()).substring(1); //Substring away hex # at beginning
             }
         }
-        periodItems[selectedPeriodItemIndex].name = textInput;
+        periodItems[selectedPeriodItemIndex].periodName = textInput;
         periodItems[selectedPeriodItemIndex].color = String(inputColorElement.val()).substring(1);
         editButton.trigger("click");
-        refreshScheduleList();
+        refreshScheduleList(true);
     }
     else {
-        periodItems.push(new PeriodItem(textInput, String(inputColorElement.val()).substring(1))); //Cut off the # at the start of the color string
+        periodItems.push(new ScheduleItemGeneric(textInput, null, String(inputColorElement.val()).substring(1))); //Cut off the # at the start of the color string
     }
     inputElement.val("");
-    refreshPeriodList();
+    refreshPeriodList(true);
 });
 editButton.on("click", function () {
     var inputElement = $("#new-period-text");
@@ -158,14 +155,14 @@ editButton.on("click", function () {
         editButton.html("Cancel");
         removeButton.hide();
         //Load data from the selected task item into fields
-        inputElement.val(periodItems[selectedPeriodItemIndex].name);
+        inputElement.val(periodItems[selectedPeriodItemIndex].periodName);
         inputColorElement.val("#" + periodItems[selectedPeriodItemIndex].color);
     }
 });
 removeButton.on("click", function () {
     //Set scheduleItems that were using this period back to None, set color to default
     for (var i = 0; i < scheduleItems.length; ++i) {
-        if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].name) {
+        if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].periodName) {
             scheduleItems[i].periodName = "None";
             scheduleItems[i].color = defaultPeriodColor;
         }
@@ -188,11 +185,28 @@ removeButton.on("click", function () {
     else if (selectedPeriodItemIndex >= periodItems.length) { //If user selected last task
         selectedPeriodItemIndex -= 1;
     }
-    refreshScheduleList();
-    refreshPeriodList();
+    refreshScheduleList(true);
+    refreshPeriodList(true);
 });
 //-----------------------------
 //Functions
+function updateScheduleItems(data, sendServerPost) {
+    scheduleItems = [];
+    if (data == undefined)
+        return;
+    for (var i = 0; i < data.length; ++i) {
+        scheduleItems.push(new ScheduleItemGeneric(data[i].periodName, data[i].hour, data[i].color));
+    }
+    refreshScheduleList(sendServerPost);
+}
+function updatePeriodItems(data, sendServerPost) {
+    //Clear existing values
+    periodItems = [];
+    for (var i = 0; i < data.length; ++i) {
+        periodItems.push(new ScheduleItemGeneric(data[i].periodName, null, data[i].color));
+    }
+    refreshPeriodList(sendServerPost);
+}
 function deselectAllPeriods() {
     selectedPeriodItemIndex = -1;
     var htmlPeriodItems = $(".list-period-item");
@@ -202,6 +216,8 @@ function deselectAllPeriods() {
     }
 }
 function timeTableAppend(item) {
+    if (item.hour == null)
+        item.hour = "";
     var newScheduleItemColumn1 = $("<div class='col-3'/>")
         .text(item.hour);
     var newScheduleItemColumn2 = $("<div class='col-9'/>")
@@ -216,7 +232,7 @@ function timeTableAppend(item) {
     newScheduleItem.appendTo(scheduleItemContainer);
 }
 //Refresh list
-function refreshScheduleList() {
+function refreshScheduleList(sendServerPost) {
     scheduleItemContainer.html(" "); //Clear old text
     for (var i = 0; i < scheduleItems.length; ++i) {
         timeTableAppend(scheduleItems[i]);
@@ -233,6 +249,7 @@ function refreshScheduleList() {
             if (selectedScheduleItemIndex >= 0) {
                 htmlScheduleItems[selectedScheduleItemIndex].classList.remove("active-important", "list-group-item");
                 htmlScheduleItems[selectedScheduleItemIndex].classList.add("list-group-item-darker");
+                htmlScheduleItems[selectedScheduleItemIndex].children[0].classList.remove("white-important");
             }
             //If clicking the same item, unselect it
             if (selectedScheduleItemIndex == i) {
@@ -244,6 +261,7 @@ function refreshScheduleList() {
                 selectedScheduleItemIndex = i;
                 htmlScheduleItems[i].classList.add("active-important", "list-group-item");
                 htmlScheduleItems[i].classList.remove("list-group-item-darker");
+                htmlScheduleItems[i].children[0].classList.add("white-important");
                 //Select scheduleItem item associated with the schedule
                 scheduleItemSelected = true;
                 var htmlPeriodItems = $(".list-period-item");
@@ -267,19 +285,21 @@ function refreshScheduleList() {
     if (selectedScheduleItemIndex >= 0) {
         htmlScheduleItems[selectedScheduleItemIndex].classList.add("active-important", "list-group-item");
         htmlScheduleItems[selectedScheduleItemIndex].classList.remove("list-group-item-darker");
+        htmlScheduleItems[selectedScheduleItemIndex].children[0].classList.add("white-important");
     }
     //Save scheduleItems
-    electron_1.ipcRenderer.send("data-save", { identifier: scheduleItemsIdentifier, data: scheduleItems });
+    electron_1.ipcRenderer.send(RequestTypes_1.LocalStorageOperation.Save, { identifier: scheduleItemsIdentifier, data: scheduleItems });
     //send POST to server
-    electron_1.ipcRenderer.send("networking-send", { requestType: RequestTypes_1.RequestType.Post, identifiers: [scheduleItemsIdentifier], data: scheduleItems });
+    if (sendServerPost)
+        electron_1.ipcRenderer.send(RequestTypes_1.NetworkOperation.Send, { requestType: RequestTypes_1.RequestType.Post, identifiers: [scheduleItemsIdentifier], data: scheduleItems });
 }
-function refreshPeriodList() {
-    periodItemContainer.html(" "); //Clear old text
+function refreshPeriodList(sendServerPost) {
+    periodItemContainer.html(""); //Clear old text
     for (var i = 0; i < periodItems.length; ++i) {
         $("<li class='list-group-item-darker list-group-flush list-period-item'/>")
             .css("background-color", "#" + periodItems[i].color)
             .css("color", invert_color_1.default(periodItems[i].color))
-            .text(periodItems[i].name)
+            .text(periodItems[i].periodName)
             .appendTo(periodItemContainer);
     }
     var htmlPeriodItems = $(".list-period-item");
@@ -312,10 +332,10 @@ function refreshPeriodList() {
                 //Allow choosing period of a scheduleItem if a scheduleItem is selected
                 if (scheduleItemSelected) {
                     //Set the value of the scheduleItem to the period
-                    scheduleItems[selectedScheduleItemIndex].periodName = periodItems[selectedPeriodItemIndex].name;
+                    scheduleItems[selectedScheduleItemIndex].periodName = periodItems[selectedPeriodItemIndex].periodName;
                     scheduleItems[selectedScheduleItemIndex].color = periodItems[selectedPeriodItemIndex].color;
                     //Refresh for text changes to the schedule list to show up
-                    refreshScheduleList();
+                    refreshScheduleList(true);
                     periodConfigurationMenu.hide();
                 }
                 else { //Otherwise show the configuration menu for periods
@@ -332,9 +352,7 @@ function refreshPeriodList() {
     for (var i = 0; i < htmlPeriodItems.length; ++i) {
         _loop_2(i);
     }
-    //Save periodItems
-    electron_1.ipcRenderer.send("data-save", { identifier: periodItemsIdentifier, data: periodItems });
-    //Select the previously selected task
+    //Select the previously selected period
     if (selectedPeriodItemIndex >= 0) {
         htmlPeriodItems[selectedPeriodItemIndex].classList.add("active-important", "list-group-item");
         htmlPeriodItems[selectedPeriodItemIndex].classList.remove("list-group-item-darker");
@@ -343,4 +361,8 @@ function refreshPeriodList() {
     if (selectedPeriodItemIndex == 0) {
         periodConfigurationMenu.hide();
     }
+    //Save periodItems
+    electron_1.ipcRenderer.send(RequestTypes_1.LocalStorageOperation.Save, { identifier: periodItemsIdentifier, data: periodItems });
+    if (sendServerPost)
+        electron_1.ipcRenderer.send(RequestTypes_1.NetworkOperation.Send, { requestType: RequestTypes_1.RequestType.Post, identifiers: [periodItemsIdentifier], data: periodItems });
 }

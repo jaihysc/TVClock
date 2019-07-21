@@ -1,6 +1,6 @@
 package storage;
 
-import scheduleList.ScheduleItem;
+import scheduleList.ScheduleItemGeneric;
 import taskList.TaskItem;
 
 /**
@@ -9,7 +9,9 @@ import taskList.TaskItem;
  */
 public class ApplicationData {
     public static TaskItem[] taskItems;
-    public static ScheduleItem[] scheduleItems;
+    public static ScheduleItemGeneric[] scheduleItems;
+    public static ScheduleItemGeneric[] periodItems;
+
 
     public static String weatherApiKey;
     public static String noticeBarDocumentId;

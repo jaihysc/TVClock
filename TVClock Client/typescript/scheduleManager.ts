@@ -3,27 +3,17 @@
 
 import { ipcRenderer } from "electron";
 import invert, { RGB, RgbArray, HexColor, BlackWhite } from "invert-color";
-import {RequestType} from "./RequestTypes";
+import {RequestType, NetworkOperation, LocalStorageOperation} from "./RequestTypes";
 
-class ScheduleItem {
+class ScheduleItemGeneric {
     periodName: string;
 
-    hour: string; // E.G 1 AM
+    hour: string | null; // E.G 1 AM
     color: string; //6 character hex string
 
-    constructor(periodName: string, hour: string, color: string) {
+    constructor(periodName: string, hour: string | null, color: string) {
         this.periodName = periodName;
         this.hour = hour;
-        this.color = color;
-    }
-}
-
-class PeriodItem {
-    name: string;
-    color: string; //6 character Hexadecimal string
-
-    constructor(name: string, color: string) {
-        this.name = name;
         this.color = color;
     }
 }
@@ -31,11 +21,10 @@ class PeriodItem {
 //--------------------------
 //Setup
 //List of all 24 scheduleItems
-let scheduleItems: ScheduleItem[] = [];
-let periodItems: PeriodItem[] = [];
+let scheduleItems: ScheduleItemGeneric[] = [];
+let periodItems: ScheduleItemGeneric[] = [];
 
 const defaultPeriodColor = "464646";
-periodItems.push(new PeriodItem("None", defaultPeriodColor)); //Push a single default period item
 
 const scheduleItemsIdentifier = "schedule-view-scheduleItems";
 const periodItemsIdentifier = "schedule-view-periodItems";
@@ -46,54 +35,63 @@ const periodItemsIdentifier = "schedule-view-periodItems";
 $(function() {
     const fetchFromServerIdentifier = "schedule-view-fetchedFromServer";
 
-    let fetchedFromServer: boolean = ipcRenderer.sendSync("data-retrieve", fetchFromServerIdentifier);
+    let fetchedFromServer: boolean = ipcRenderer.sendSync(LocalStorageOperation.Fetch, fetchFromServerIdentifier);
     if (!fetchedFromServer) {
-        let jsonData = ipcRenderer.sendSync("networking-send", {requestType: RequestType.Get, identifiers: [scheduleItemsIdentifier]});
-        let data = JSON.parse(jsonData.data[0]);
+        let retrievedScheduleIData = ipcRenderer.sendSync(NetworkOperation.Send,
+            {requestType: RequestType.Get, identifiers: [scheduleItemsIdentifier]});
+        let retrievedPeriodData = ipcRenderer.sendSync(NetworkOperation.Send,
+            {requestType: RequestType.Get, identifiers: [periodItemsIdentifier]});
+
+        let scheduleData: any;
+        let periodData: any;
 
         //Generate default schedule list if not defined by the server
-        if (data == undefined) {
+        if (retrievedScheduleIData == undefined || retrievedScheduleIData.data == undefined || (scheduleData = JSON.parse(retrievedScheduleIData.data[0])) == undefined ||
+        retrievedPeriodData == undefined || retrievedPeriodData.data == undefined || (periodData = JSON.parse(retrievedPeriodData.data[0])) == undefined ) {
             //AM
             for (let i = 1; i <= 12; ++i) {
-                let item = new ScheduleItem("None", i + " AM", defaultPeriodColor);
+                let item = new ScheduleItemGeneric("None", i + " AM", defaultPeriodColor);
                 timeTableAppend(item); //None is default period name
                 scheduleItems.push(item);
             }
             //PM
             for (let i = 1; i <= 12; ++i) {
-                let item = new ScheduleItem("None", i + " PM", defaultPeriodColor);
+                let item = new ScheduleItemGeneric("None", i + " PM", defaultPeriodColor);
                 timeTableAppend(item);
                 scheduleItems.push(item);
             }
-        } else {
-            for (let i = 0; i < data.length; ++i) {
-                scheduleItems.push(new ScheduleItem(data[i].periodName, data[i].hour, data[i].color))
-            }
 
-            //TODO, infer period items based on scheduleItems
+            //Push a single default period item
+            periodItems.push(new ScheduleItemGeneric("None", null, defaultPeriodColor));
+
+            refreshScheduleList(true);
+            refreshPeriodList(true);
+        } else {
+            //Schedule list already exists on server
+            updateScheduleItems(scheduleData, false);
+            updatePeriodItems(periodData, false);
         }
 
         //Save that it has fetched from server
-        ipcRenderer.send("data-save", {identifier: fetchFromServerIdentifier, data: true});
+        ipcRenderer.send(LocalStorageOperation.Save, {identifier: fetchFromServerIdentifier, data: true});
     } else {
+        //Retrieved from localstorage
         //Retrieve ScheduleItems
-        let retrievedScheduleItems: ScheduleItem[] = ipcRenderer.sendSync("data-retrieve", scheduleItemsIdentifier);
-        for (let i = 0; i < retrievedScheduleItems.length; ++i) {
-            scheduleItems.push(new ScheduleItem(retrievedScheduleItems[i].periodName, retrievedScheduleItems[i].hour, retrievedScheduleItems[i].color))
-        }
+        let retrievedScheduleItems = ipcRenderer.sendSync(LocalStorageOperation.Fetch, scheduleItemsIdentifier);
+        updateScheduleItems(retrievedScheduleItems, false);
 
         //Retrieve PeriodItems
-        let retrievedPeriodItems: PeriodItem[] = ipcRenderer.sendSync("data-retrieve", periodItemsIdentifier);
-        //Clear existing values
-        periodItems = [];
+        let retrievedPeriodItems = ipcRenderer.sendSync(LocalStorageOperation.Fetch, periodItemsIdentifier);
 
-        for (let i = 0; i < retrievedPeriodItems.length; ++i) {
-            periodItems.push(new PeriodItem(retrievedPeriodItems[i].name, retrievedPeriodItems[i].color))
-        }
+        updatePeriodItems(retrievedPeriodItems, false);
     }
 
-    refreshScheduleList();
-    refreshPeriodList();
+    ipcRenderer.on(scheduleItemsIdentifier + "-update", (event: any, data: string) => {
+        updateScheduleItems(JSON.parse(data), false);
+    });
+    ipcRenderer.on(periodItemsIdentifier + "-update", (event: any, data: string) => {
+        updatePeriodItems(JSON.parse(data), false);
+    });
 });
 
 //Containers for scheduleItems and periodItems
@@ -134,8 +132,8 @@ addButton.on("click", () => {
 
     //Check for duplicates
     for (let i = 0; i < periodItems.length; ++i) {
-        if (periodItems[i].name == textInput) {
-            if (editingPeriod && periodItems[selectedPeriodItemIndex].name == textInput) //Do not count itself as duplicate when editing
+        if (periodItems[i].periodName == textInput) {
+            if (editingPeriod && periodItems[selectedPeriodItemIndex].periodName == textInput) //Do not count itself as duplicate when editing
                 continue;
 
             errorText.html("Period already exists");
@@ -151,24 +149,24 @@ addButton.on("click", () => {
     if (editingPeriod) {
         //Rename all scheduleItems with the name to the new name, change color to new color
         for (let i = 0; i < scheduleItems.length; ++i) {
-            if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].name) {
+            if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].periodName) {
                 scheduleItems[i].periodName = textInput;
                 scheduleItems[i].color = String(inputColorElement.val()).substring(1); //Substring away hex # at beginning
             }
         }
 
-        periodItems[selectedPeriodItemIndex].name = textInput;
+        periodItems[selectedPeriodItemIndex].periodName = textInput;
         periodItems[selectedPeriodItemIndex].color = String(inputColorElement.val()).substring(1);
 
         editButton.trigger("click");
-        refreshScheduleList();
+        refreshScheduleList(true);
     } else {
-        periodItems.push(new PeriodItem(textInput, String(inputColorElement.val()).substring(1))); //Cut off the # at the start of the color string
+        periodItems.push(new ScheduleItemGeneric(textInput, null, String(inputColorElement.val()).substring(1))); //Cut off the # at the start of the color string
     }
 
     inputElement.val("");
 
-    refreshPeriodList();
+    refreshPeriodList(true);
 });
 
 editButton.on("click", () => {
@@ -190,7 +188,7 @@ editButton.on("click", () => {
         removeButton.hide();
 
         //Load data from the selected task item into fields
-        inputElement.val(periodItems[selectedPeriodItemIndex].name);
+        inputElement.val(periodItems[selectedPeriodItemIndex].periodName);
         inputColorElement.val("#" + periodItems[selectedPeriodItemIndex].color);
     }
 });
@@ -198,7 +196,7 @@ editButton.on("click", () => {
 removeButton.on("click", () => {
     //Set scheduleItems that were using this period back to None, set color to default
     for (let i = 0; i < scheduleItems.length; ++i) {
-        if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].name) {
+        if (scheduleItems[i].periodName == periodItems[selectedPeriodItemIndex].periodName) {
             scheduleItems[i].periodName = "None";
             scheduleItems[i].color = defaultPeriodColor;
         }
@@ -224,12 +222,34 @@ removeButton.on("click", () => {
         selectedPeriodItemIndex -= 1;
     }
 
-    refreshScheduleList();
-    refreshPeriodList();
+    refreshScheduleList(true);
+    refreshPeriodList(true);
 });
 
 //-----------------------------
 //Functions
+function updateScheduleItems(data: any[], sendServerPost: boolean) {
+    scheduleItems = [];
+    if (data == undefined)
+        return;
+
+    for (let i = 0; i < data.length; ++i) {
+        scheduleItems.push(new ScheduleItemGeneric(data[i].periodName, data[i].hour, data[i].color))
+    }
+
+    refreshScheduleList(sendServerPost);
+}
+function updatePeriodItems(data: ScheduleItemGeneric[], sendServerPost: boolean) {
+    //Clear existing values
+    periodItems = [];
+
+    for (let i = 0; i < data.length; ++i) {
+        periodItems.push(new ScheduleItemGeneric(data[i].periodName, null, data[i].color))
+    }
+
+    refreshPeriodList(sendServerPost)
+}
+
 function deselectAllPeriods() {
     selectedPeriodItemIndex = -1;
 
@@ -240,7 +260,10 @@ function deselectAllPeriods() {
     }
 }
 
-function timeTableAppend(item: ScheduleItem) {
+function timeTableAppend(item: ScheduleItemGeneric) {
+    if (item.hour == null)
+        item.hour = "";
+
     let newScheduleItemColumn1 = $("<div class='col-3'/>")
         .text(item.hour);
     let newScheduleItemColumn2 = $("<div class='col-9'/>")
@@ -259,7 +282,7 @@ function timeTableAppend(item: ScheduleItem) {
 }
 
 //Refresh list
-function refreshScheduleList() {
+function refreshScheduleList(sendServerPost: boolean) {
     scheduleItemContainer.html(" "); //Clear old text
     for (let i = 0; i < scheduleItems.length; ++i) {
         timeTableAppend(scheduleItems[i]);
@@ -278,6 +301,7 @@ function refreshScheduleList() {
             if (selectedScheduleItemIndex >= 0) {
                 htmlScheduleItems[selectedScheduleItemIndex].classList.remove("active-important", "list-group-item");
                 htmlScheduleItems[selectedScheduleItemIndex].classList.add("list-group-item-darker");
+                htmlScheduleItems[selectedScheduleItemIndex].children[0].classList.remove("white-important");
             }
 
             //If clicking the same item, unselect it
@@ -292,6 +316,7 @@ function refreshScheduleList() {
 
                 htmlScheduleItems[i].classList.add("active-important", "list-group-item");
                 htmlScheduleItems[i].classList.remove("list-group-item-darker");
+                htmlScheduleItems[i].children[0].classList.add("white-important");
 
                 //Select scheduleItem item associated with the schedule
                 scheduleItemSelected = true;
@@ -317,22 +342,24 @@ function refreshScheduleList() {
     if (selectedScheduleItemIndex >= 0) {
         htmlScheduleItems[selectedScheduleItemIndex].classList.add("active-important", "list-group-item");
         htmlScheduleItems[selectedScheduleItemIndex].classList.remove("list-group-item-darker");
+        htmlScheduleItems[selectedScheduleItemIndex].children[0].classList.add("white-important");
     }
 
     //Save scheduleItems
-    ipcRenderer.send("data-save", {identifier: scheduleItemsIdentifier, data: scheduleItems});
+    ipcRenderer.send(LocalStorageOperation.Save, {identifier: scheduleItemsIdentifier, data: scheduleItems});
     //send POST to server
-    ipcRenderer.send("networking-send", {requestType: RequestType.Post, identifiers: [scheduleItemsIdentifier], data: scheduleItems});
+    if (sendServerPost)
+        ipcRenderer.send(NetworkOperation.Send, {requestType: RequestType.Post, identifiers: [scheduleItemsIdentifier], data: scheduleItems});
 }
 
-function refreshPeriodList() {
-    periodItemContainer.html(" "); //Clear old text
+function refreshPeriodList(sendServerPost: boolean) {
+    periodItemContainer.html(""); //Clear old text
 
     for (let i = 0; i < periodItems.length; ++i) {
         $("<li class='list-group-item-darker list-group-flush list-period-item'/>")
             .css("background-color", "#" + periodItems[i].color)
             .css("color", invert(periodItems[i].color))
-            .text(periodItems[i].name)
+            .text(periodItems[i].periodName)
             .appendTo(periodItemContainer);
     }
 
@@ -371,11 +398,11 @@ function refreshPeriodList() {
                 //Allow choosing period of a scheduleItem if a scheduleItem is selected
                 if (scheduleItemSelected) {
                     //Set the value of the scheduleItem to the period
-                    scheduleItems[selectedScheduleItemIndex].periodName = periodItems[selectedPeriodItemIndex].name;
+                    scheduleItems[selectedScheduleItemIndex].periodName = periodItems[selectedPeriodItemIndex].periodName;
                     scheduleItems[selectedScheduleItemIndex].color = periodItems[selectedPeriodItemIndex].color;
 
                     //Refresh for text changes to the schedule list to show up
-                    refreshScheduleList();
+                    refreshScheduleList(true);
 
                     periodConfigurationMenu.hide();
                 } else { //Otherwise show the configuration menu for periods
@@ -390,10 +417,7 @@ function refreshPeriodList() {
         })
     }
 
-    //Save periodItems
-    ipcRenderer.send("data-save", {identifier: periodItemsIdentifier, data: periodItems});
-
-    //Select the previously selected task
+    //Select the previously selected period
     if (selectedPeriodItemIndex >= 0) {
         htmlPeriodItems[selectedPeriodItemIndex].classList.add("active-important", "list-group-item");
         htmlPeriodItems[selectedPeriodItemIndex].classList.remove("list-group-item-darker");
@@ -402,4 +426,11 @@ function refreshPeriodList() {
     if (selectedPeriodItemIndex == 0) {
         periodConfigurationMenu.hide();
     }
+
+    //Save periodItems
+    ipcRenderer.send(LocalStorageOperation.Save, {identifier: periodItemsIdentifier, data: periodItems});
+
+    if (sendServerPost)
+        ipcRenderer.send(NetworkOperation.Send, {requestType: RequestType.Post, identifiers: [periodItemsIdentifier], data: periodItems});
+
 }

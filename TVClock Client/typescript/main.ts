@@ -107,6 +107,20 @@ function initNetworking() {
             return;
         }
 
+        //Handle update requests from the server
+        if (returnedPacket.requestType == RequestType.Update) {
+            if (returnedPacket.dataIdentifiers == undefined || returnedPacket.data == undefined)
+                return;
+
+            for (let i = 0; i < returnedPacket.dataIdentifiers.length; ++ i) {
+                //Update requests will use the channel specified by dataIdentifiers with "-update" appended at the end
+                //schedule-view-scheduleItems would become schedule-view-scheduleItems-update
+                mainWindow.webContents.send(
+                    returnedPacket.dataIdentifiers[i] + "-update", returnedPacket.data[i]);
+            }
+            return;
+        }
+
         let foundId = false;
         //Find event matching returnedVal id
         for (let i = 0; i < networkingQueuedRequests.length; ++i) {

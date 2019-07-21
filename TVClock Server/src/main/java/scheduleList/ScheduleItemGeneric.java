@@ -1,6 +1,6 @@
 package scheduleList;
 
-public class ScheduleItem {
+public class ScheduleItemGeneric {
     public String periodName;
     public String hour;
     /**

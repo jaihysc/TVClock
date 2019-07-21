@@ -38,6 +38,7 @@ var _this = this;
 Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
 var electron_2 = require("electron");
+var RequestTypes_1 = require("./RequestTypes");
 var mainWindow;
 //Networking
 var net = require("net");
@@ -136,6 +137,17 @@ function initNetworking() {
         }
         catch (e) {
             console.log("Networking | Error handling received message: " + e);
+            return;
+        }
+        //Handle update requests from the server
+        if (returnedPacket.requestType == RequestTypes_1.RequestType.Update) {
+            if (returnedPacket.dataIdentifiers == undefined || returnedPacket.data == undefined)
+                return;
+            for (var i = 0; i < returnedPacket.dataIdentifiers.length; ++i) {
+                //Update requests will use the channel specified by dataIdentifiers with "-update" appended at the end
+                //schedule-view-scheduleItems would become schedule-view-scheduleItems-update
+                mainWindow.webContents.send(returnedPacket.dataIdentifiers[i] + "-update", returnedPacket.data[i]);
+            }
             return;
         }
         var foundId = false;

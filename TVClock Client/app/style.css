@@ -68,4 +68,9 @@ body {
 /* Used for overwriting the schedule background css color selector*/
 .active-important {
     background-color: #007bff !important;
+    color: white !important;
+}
+
+.white-important {
+    color: white !important;
 }

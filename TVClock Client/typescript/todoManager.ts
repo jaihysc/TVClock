@@ -2,7 +2,7 @@
 //Manager for tasks view
 
 import { ipcRenderer } from "electron";
-import { RequestType } from "./RequestTypes";
+import { RequestType, NetworkOperation, LocalStorageOperation } from "./RequestTypes";
 
 //An active task in the task list
 class Task {
@@ -28,7 +28,7 @@ const tasksIdentifier = "todo-view-tasks"; //Identifier for tasks in persistence
 //Networking retrieve stored tasks
 //Wait until the document is ready before running dso the user has something to look at
 $(function() {
-    let fetchedFromServer: boolean = ipcRenderer.sendSync("data-retrieve", "todo-view-fetchedFromServer");
+    let fetchedFromServer: boolean = ipcRenderer.sendSync(LocalStorageOperation.Fetch, "todo-view-fetchedFromServer");
 
     let data: Task[] = [];
     if (fetchedFromServer == undefined) {
@@ -36,34 +36,25 @@ $(function() {
             //If undefined, it means no fetch has been sent to the server
             if (fetchedFromServer == undefined) {
                 //Send fetch request to server
-                let jsonData = ipcRenderer.sendSync("networking-send", {requestType: RequestType.Get, identifiers: [tasksIdentifier]});
+                let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [tasksIdentifier]});
                 data = JSON.parse(jsonData.data[0]);
 
                 //Save that a fetch has already been performed to the server
-                ipcRenderer.send("data-save", {identifier: "todo-view-fetchedFromServer", data: true});
+                ipcRenderer.send(LocalStorageOperation.Save, {identifier: "todo-view-fetchedFromServer", data: true});
 
-                if (data != undefined) {
-                    for (let i = 0; i < data.length; ++i) {
-                        //Reconvert date text into date
-                        tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
-                    }
-                }
-
-                //Updates the appearance of the task list with the data from tasks
-                updateTaskList();
+                updateTasks(data, false);
             }
         });
     } else {
-        //Retrieve back stored data
-        data = ipcRenderer.sendSync("data-retrieve", tasksIdentifier);
-
-        for (let i = 0; i < data.length; ++i) {
-            //Reconvert date text into date
-            tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
-        }
-        //Updates the appearance of the task list with the data from tasks
-        updateTaskList();
+        //Retrieve back stored data from localstorage
+        data = ipcRenderer.sendSync(LocalStorageOperation.Fetch, tasksIdentifier);
+        updateTasks(data, false);
     }
+
+    //Set up update request handler
+    ipcRenderer.on(tasksIdentifier + "-update", (event: any, data: string) => {
+        updateTasks(JSON.parse(data), false);
+    });
 });
 
 //-----------------------------
@@ -128,7 +119,7 @@ addTaskBtn.on("click", () => {
     }
     wipeInputFields();
     //Refresh task list to include changes
-    updateTaskList();
+    updateTaskList(true);
 });
 
 //Edit and remove button functionality
@@ -176,11 +167,24 @@ removeTaskBtn.on("click", () => {
         selectedTaskIndex -= 1;
     }
 
-    updateTaskList();
+    updateTaskList(true);
 });
 
 //-----------------------------
 //Functions
+function updateTasks(data: any[], sendServerPost: boolean) {
+    tasks = []; //Clear tasks first
+    if (data != undefined) {
+        for (let i = 0; i < data.length; ++i) {
+            //Reconvert date text into date
+            tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
+        }
+    }
+
+    //Updates the appearance of the task list with the data from tasks
+    updateTaskList(sendServerPost);
+}
+
 function wipeInputFields() {
     newTaskText.val("");
     newTaskStartDate.val("");
@@ -192,7 +196,7 @@ function toFullDateString(date: Date) {
 }
 
 //Injects html into the list for elements to appear on screen, saves task data to persistent
-function updateTaskList() {
+function updateTaskList(sendServerPost: boolean) {
     taskList.html(""); //Clear old contents first
 
     for (let i = 0; i < tasks.length; ++i) {
@@ -251,7 +255,8 @@ function updateTaskList() {
     }
 
     //Save task data to persistent
-    ipcRenderer.send("data-save", {identifier: tasksIdentifier, data: tasks});
+    ipcRenderer.send(LocalStorageOperation.Save, {identifier: tasksIdentifier, data: tasks});
     //Send POST to server
-    ipcRenderer.send("networking-send", {requestType: RequestType.Post, identifiers: [tasksIdentifier], data: tasks});
+    if (sendServerPost)
+        ipcRenderer.send(NetworkOperation.Send, {requestType: RequestType.Post, identifiers: [tasksIdentifier], data: tasks});
 }
