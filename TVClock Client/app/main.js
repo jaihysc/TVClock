@@ -40,7 +40,6 @@ var electron_1 = require("electron");
 var electron_2 = require("electron");
 var RequestTypes_1 = require("./RequestTypes");
 var mainWindow;
-//Networking
 var net = require("net");
 var networkClient = new net.Socket();
 function createWindow() {
@@ -55,38 +54,25 @@ function createWindow() {
                         width: 1920,
                         height: 1080,
                     });
-                    return [4 /*yield*/, mainWindow.loadFile("index.html")];
+                    return [4, mainWindow.loadFile("index.html")];
                 case 1:
                     _a.sent();
                     mainWindow.setMenuBarVisibility(false);
-                    // Open the DevTools.
                     mainWindow.webContents.openDevTools();
-                    // Window close
                     mainWindow.on("closed", function () {
                         console.log("Program exiting...");
-                        // Dereference the window object, usually you would store windows
-                        // in an array if your app supports multi windows, this is the time
-                        // when you should delete the corresponding element.
                         mainWindow.destroy();
-                        //Close networking connections
                         networkDisconnect();
                         console.log("Goodbye!");
                     });
-                    //Setup networking
                     initNetworking();
-                    return [2 /*return*/];
+                    return [2];
             }
         });
     });
 }
-// electron has finished initialization
-// ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 electron_1.app.on("ready", createWindow);
-// Quit when all windows are closed.
 electron_1.app.on("window-all-closed", function () {
-    // On OS X it is common for applications and their menu bar
-    // to stay active until the user quits explicitly with Cmd + Q
     if (process.platform !== "darwin") {
         electron_1.app.quit();
     }
@@ -95,20 +81,16 @@ electron_1.app.on("activate", function () { return __awaiter(_this, void 0, void
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                if (!(mainWindow === null)) return [3 /*break*/, 2];
-                return [4 /*yield*/, createWindow()];
+                if (!(mainWindow === null)) return [3, 2];
+                return [4, createWindow()];
             case 1:
                 _a.sent();
                 _a.label = 2;
-            case 2: return [2 /*return*/];
+            case 2: return [2];
         }
     });
 }); });
-//---------------------------------
-//Networking
-//Handles communication between the client and server
-//Class to serialize / deserialize responses to and from the server
-var NetworkingPacket = /** @class */ (function () {
+var NetworkingPacket = (function () {
     function NetworkingPacket(requestType, data, dataIdentifiers, timestamp, id) {
         this.requestType = requestType;
         this.data = data;
@@ -118,7 +100,7 @@ var NetworkingPacket = /** @class */ (function () {
     }
     return NetworkingPacket;
 }());
-var NetworkingConfig = /** @class */ (function () {
+var NetworkingConfig = (function () {
     function NetworkingConfig() {
         this.hostname = "localhost";
         this.port = 4999;
@@ -139,25 +121,19 @@ function initNetworking() {
             console.log("Networking | Error handling received message: " + e);
             return;
         }
-        //Handle update requests from the server
         if (returnedPacket.requestType == RequestTypes_1.RequestType.Update) {
             if (returnedPacket.dataIdentifiers == undefined || returnedPacket.data == undefined)
                 return;
             for (var i = 0; i < returnedPacket.dataIdentifiers.length; ++i) {
-                //Update requests will use the channel specified by dataIdentifiers with "-update" appended at the end
-                //schedule-view-scheduleItems would become schedule-view-scheduleItems-update
                 mainWindow.webContents.send(returnedPacket.dataIdentifiers[i] + "-update", returnedPacket.data[i]);
             }
             return;
         }
         var foundId = false;
-        //Find event matching returnedVal id
         for (var i = 0; i < networkingQueuedRequests.length; ++i) {
             if (networkingQueuedRequests[i].id === returnedPacket.id) {
-                //Return deserialized server response to caller
-                //Note the data is still in json as it is stored in a string array
                 networkingQueuedRequests[i].event.returnValue = { identifiers: returnedPacket.dataIdentifiers, data: returnedPacket.data };
-                networkingQueuedRequests.splice(i, 1); //Remove networkingRequests element after fulfilling request
+                networkingQueuedRequests.splice(i, 1);
                 foundId = true;
                 break;
             }
@@ -171,40 +147,30 @@ function initNetworking() {
     });
     networkClient.on("error", function (error) {
         console.log("Networking | " + error);
-        //Return null to all networking-send events
         networkingQueuedRequests.forEach(function (value) {
             value.event.returnValue = null;
         });
-        networkingQueuedRequests = []; //clear queued requests
+        networkingQueuedRequests = [];
         mainWindow.webContents.send("networking-status", "disconnected");
     });
-    //Start networking
     networkConnect();
-    //Event handlers for reconnect and send from renderer process
     electron_2.ipcMain.on("networking-reconnect", function (event, arg) {
         console.log("Networking | Attempting to reconnect");
         networkConnect();
     });
-    //Sends specified identifiers with RequestType and returns the response
     electron_2.ipcMain.on("networking-send", function (event, args) {
         var id = networkingId++;
         var dataJson = [];
-        //Serialize data into string arrays first
         if (args.data != undefined) {
             dataJson.push(JSON.stringify(args.data));
         }
         var packet = new NetworkingPacket(args.requestType, dataJson, args.identifiers, Date.now(), id);
-        //Log the return event in an array for a data reply
         networkingQueuedRequests.push({ id: id, event: event });
-        //Serialize into json string and send it to the server
         networkSend(JSON.stringify(packet));
     });
-    //Allow for changing of port + hostname
     electron_2.ipcMain.on("networking-info-modify", function (event, arg) {
-        //Should receive hostname + port
         networkConfig.port = arg.port;
         networkConfig.hostname = arg.hostname;
-        //Reconnect with new settings
         networkDisconnect();
         networkConnect();
     });
@@ -216,12 +182,14 @@ function networkDisconnect() {
 function networkConnect() {
     mainWindow.webContents.send("networking-status", "connecting");
     console.log("Networking | Connecting");
-    //Attempt to establish connection on specified port
     networkClient.connect(networkConfig.port, networkConfig.hostname, function () {
-        //connection established
-        mainWindow.webContents.send("networking-status", "connected");
-        mainWindow.webContents.send("main-ready"); //Inform that network is established
         console.log("Networking | Connection established");
+        mainWindow.webContents.send("networking-status", "connected");
+        mainWindow.webContents.send("networking-display-address", {
+            hostname: (networkConfig.hostname == "localhost") ? "127.0.0.1" : networkConfig.hostname,
+            port: String(networkConfig.port)
+        });
+        mainWindow.webContents.send("main-ready");
     });
 }
 function networkSend(str) {
@@ -229,6 +197,4 @@ function networkSend(str) {
         console.log("Networking | Sent: " + str);
     });
 }
-// In this file you can include the rest of your app"s specific main process
-// code. You can also put them in separate files and require them here.
 require("./dataPersistence");

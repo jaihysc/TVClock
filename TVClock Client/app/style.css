@@ -28,6 +28,9 @@ body {
 
 .status-bar-text {
     margin-bottom: 0;
+    margin-left: 4px;
+    margin-right: 4px;
+
 }
 
 .status-bar-btn {

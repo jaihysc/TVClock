@@ -14,5 +14,5 @@ var NetworkOperation;
 var LocalStorageOperation;
 (function (LocalStorageOperation) {
     LocalStorageOperation["Save"] = "data-save";
-    LocalStorageOperation["Fetch"] = "data-retrieve"; //Fetch from local storage
+    LocalStorageOperation["Fetch"] = "data-retrieve";
 })(LocalStorageOperation = exports.LocalStorageOperation || (exports.LocalStorageOperation = {}));

@@ -15,6 +15,10 @@ if (connectionRefreshButton != null) {
     });
 }
 
+ipcRenderer.on("networking-display-address", (event: any, data: {hostname: string; port: string}) => {
+    $("#connected-server-address").html(`${data.hostname}:${data.port}`);
+});
+
 //Handle the appearance of the status bar depending on networking condition
 ipcRenderer.on("networking-status", (event: any, data: string) => {
     if (connectionStatusText != null) {

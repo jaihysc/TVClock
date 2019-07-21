@@ -12,5 +12,13 @@ networkingUpdateBtn.on("click", () => {
     if (networkingHostname != null)
     ipcRenderer.send("networking-info-modify",
         {hostname: String(networkingHostname.val()), port: Number(networkingPort.val())}
-    )
+    );
+
+    let hostname = networkingHostname.val();
+    if (hostname == "localhost")
+        hostname = "127.0.0.1";
+
+    ipcRenderer.send("networking-display-address",
+        {hostname: hostname, port: Number(networkingPort.val())}
+    );
 });

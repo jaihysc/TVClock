@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import {app, BrowserWindow, ipcRenderer} from "electron";
 import { ipcMain } from "electron";
 import { RequestType } from "./RequestTypes";
 import {domainToASCII} from "url";
@@ -207,11 +207,17 @@ function networkConnect() {
 
     //Attempt to establish connection on specified port
     networkClient.connect(networkConfig.port, networkConfig.hostname, () => {
+        console.log("Networking | Connection established");
         //connection established
+
         mainWindow.webContents.send("networking-status", "connected");
 
+        mainWindow.webContents.send("networking-display-address",{
+                hostname: (networkConfig.hostname == "localhost") ? "127.0.0.1" : networkConfig.hostname,
+                port: String(networkConfig.port)}
+        );
+
         mainWindow.webContents.send("main-ready"); //Inform that network is established
-        console.log("Networking | Connection established");
     });
 }
 
