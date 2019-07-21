@@ -7,22 +7,19 @@
     <center>
         <SplitPane fx:id="taskListSplitPane" dividerPositions="0.20" focusTraversable="true" prefHeight="600.0" prefWidth="200.0">
             <BorderPane style="-fx-background-color: black;">
-                <top>
-<!--                    <Label alignment="CENTER" text="Tasks"  BorderPane.alignment="CENTER" />-->
-                </top>
+                <!--Task list-->
                 <center>
                     <ListView fx:id="taskList">
                     </ListView>
                 </center>
                 <bottom>
-                    <Label alignment="CENTER" text="Bottom"  BorderPane.alignment="CENTER" />
+                    <!--Shows the next upcoming schedule item-->
+                    <Label alignment="CENTER" maxWidth="Infinity"
+                           text="None" BorderPane.alignment="CENTER" fx:id="schedulePreviewBar"/>
                 </bottom>
             </BorderPane>
 
             <BorderPane style="-fx-background-color: black;">
-                <top>
-                    <Label alignment="CENTER" text="Alert Bar"  BorderPane.alignment="CENTER" />
-                </top>
                 <center>
                     <VBox alignment="CENTER" BorderPane.alignment="CENTER">
                         <HBox alignment="CENTER">
@@ -126,8 +123,7 @@
     <bottom>
         <VBox>
             <Label alignment="CENTER" maxWidth="Infinity"
-                   style="-fx-background-color: brown"
-                   text="Work status (Productivity) (Break)" BorderPane.alignment="CENTER" />
+                   text="None" BorderPane.alignment="CENTER" fx:id="scheduleBar"/>
 
             <!--        bar which shows the progression through the day-->
             <ProgressBar fx:id="dayProgressionBar" prefWidth="Infinity"/>

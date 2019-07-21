@@ -5,8 +5,14 @@ import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
 import javafx.scene.control.*;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.CornerRadii;
+import javafx.scene.paint.Color;
 import javafx.util.Duration;
+import storage.ApplicationData;
 import taskList.TaskListManager;
 import weather.OpenWeatherMapFacade;
 import weather.models.*;
@@ -14,6 +20,7 @@ import weather.models.*;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -46,6 +53,8 @@ public class Controller implements Initializable {
     public SplitPane taskListSplitPane;
 
     public ProgressBar dayProgressionBar;
+    public Label scheduleBar;
+    public Label schedulePreviewBar;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -65,6 +74,41 @@ public class Controller implements Initializable {
 
         //Schedule bar
         initializeScheduleBar();
+
+        initializeDayProgressionBar();
+    }
+
+    private void initializeScheduleBar() {
+        Timeline t = new Timeline(new KeyFrame(Duration.ZERO, e -> {
+            //Match current hour to scheduleItem belonging to that hour
+            int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+
+            //Index the scheduleItems 0-23
+            if (ApplicationData.scheduleItems != null && ApplicationData.scheduleItems.length > hour) {
+                setScheduleBarLabel(hour, scheduleBar);
+                int nextHour = hour+1;
+                if (nextHour > 23)
+                    nextHour = 0;
+                setScheduleBarLabel(nextHour, schedulePreviewBar);
+            }
+
+        }), new KeyFrame(Duration.seconds(10)));
+
+        t.setCycleCount(Animation.INDEFINITE);
+        t.play();
+    }
+
+    private void setScheduleBarLabel(int nextHour, Label schedulePreviewBar) {
+        if (ApplicationData.scheduleItems[nextHour] != null) {
+            schedulePreviewBar.setText(ApplicationData.scheduleItems[nextHour].periodName);
+
+            Color color = Color.web(ApplicationData.scheduleItems[nextHour].color);
+            schedulePreviewBar.setBackground(new Background(
+                    new BackgroundFill(
+                            color,
+                            CornerRadii.EMPTY, Insets.EMPTY)));
+            schedulePreviewBar.setTextFill(color.invert());
+        }
     }
 
     //Fetch task list information
@@ -84,14 +128,14 @@ public class Controller implements Initializable {
                     taskList.getItems().add(TaskListManager.wrapText(item, wrapCharacter));
                 }
             }
-        }), new KeyFrame(Duration.minutes(1)));
+        }), new KeyFrame(Duration.seconds(10)));
 
         t.setCycleCount(Animation.INDEFINITE);
         t.play();
     }
 
     //Sets the progress of the bottom progress bar based on time of day
-    private void initializeScheduleBar() {
+    private void initializeDayProgressionBar() {
         Timeline t = new Timeline(new KeyFrame(Duration.ZERO, e -> {
             //Get the total number of seconds in the current time
             double val = LocalDateTime.now().getHour() * 60 * 60;

@@ -48,6 +48,10 @@ $(function() {
         //Generate default schedule list if not defined by the server
         if (retrievedScheduleIData == undefined || retrievedScheduleIData.data == undefined || (scheduleData = JSON.parse(retrievedScheduleIData.data[0])) == undefined ||
         retrievedPeriodData == undefined || retrievedPeriodData.data == undefined || (periodData = JSON.parse(retrievedPeriodData.data[0])) == undefined ) {
+            //12PM - or 0 in 24 hour
+            timeTableAppend(new ScheduleItemGeneric("None", "12 PM", defaultPeriodColor));
+            scheduleItems.push(new ScheduleItemGeneric("None", "12 PM", defaultPeriodColor));
+
             //AM
             for (let i = 1; i <= 12; ++i) {
                 let item = new ScheduleItemGeneric("None", i + " AM", defaultPeriodColor);
@@ -55,7 +59,7 @@ $(function() {
                 scheduleItems.push(item);
             }
             //PM
-            for (let i = 1; i <= 12; ++i) {
+            for (let i = 1; i <= 11; ++i) {
                 let item = new ScheduleItemGeneric("None", i + " PM", defaultPeriodColor);
                 timeTableAppend(item);
                 scheduleItems.push(item);

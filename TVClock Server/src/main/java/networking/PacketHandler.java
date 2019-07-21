@@ -8,8 +8,11 @@ import scheduleList.ScheduleItemGeneric;
 import storage.ApplicationData;
 import storage.ApplicationDataIdentifiers;
 import taskList.TaskItem;
+import taskList.TaskListManager;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Performs the corresponding actions and sets the corresponding fields as specified by Packet
@@ -80,7 +83,17 @@ public class PacketHandler implements IMessageReceived {
         Gson gson = new Gson();
         switch (identifier) {
             case ApplicationDataIdentifiers.taskItems:
-                ApplicationData.taskItems = gson.fromJson(json, TaskItem[].class);;
+                ApplicationData.taskItems = gson.fromJson(json, TaskItem[].class);
+
+                //Add taskItem name to a list to show up on screen
+                List<String> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
+                taskListSync.clear();
+                synchronized (taskListSync) {
+                    for (var taskItem : ApplicationData.taskItems) {
+                        taskListSync.add(taskItem.text);
+                    }
+                }
+
                 break;
 
             case ApplicationDataIdentifiers.scheduleItems:

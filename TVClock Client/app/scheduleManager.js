@@ -29,12 +29,14 @@ $(function () {
         var periodData = void 0;
         if (retrievedScheduleIData == undefined || retrievedScheduleIData.data == undefined || (scheduleData = JSON.parse(retrievedScheduleIData.data[0])) == undefined ||
             retrievedPeriodData == undefined || retrievedPeriodData.data == undefined || (periodData = JSON.parse(retrievedPeriodData.data[0])) == undefined) {
+            timeTableAppend(new ScheduleItemGeneric("None", "12 PM", defaultPeriodColor));
+            scheduleItems.push(new ScheduleItemGeneric("None", "12 PM", defaultPeriodColor));
             for (var i = 1; i <= 12; ++i) {
                 var item = new ScheduleItemGeneric("None", i + " AM", defaultPeriodColor);
                 timeTableAppend(item);
                 scheduleItems.push(item);
             }
-            for (var i = 1; i <= 12; ++i) {
+            for (var i = 1; i <= 11; ++i) {
                 var item = new ScheduleItemGeneric("None", i + " PM", defaultPeriodColor);
                 timeTableAppend(item);
                 scheduleItems.push(item);

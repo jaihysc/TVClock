@@ -94,6 +94,15 @@
     -fx-background-color: #8f8f8f;
 }
 
+/* Schedule */
+#scheduleBar {
+    -fx-font-size: 20px;
+}
+
+#schedulePreviewBar {
+    -fx-font-size: 20px;
+}
+
 /* Bottom progress bar */
 #dayProgressionBar .bar {
     -fx-padding: 2px;

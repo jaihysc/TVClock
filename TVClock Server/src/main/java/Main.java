@@ -5,7 +5,6 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import networking.ConnectionManager;
 import networking.PacketHandler;
-import taskList.TaskListManager;
 
 
 public class Main extends Application {
@@ -26,11 +25,6 @@ public class Main extends Application {
     public static void main(String[] args) {
         //Networking
         ConnectionManager.startNetworking(4999, new PacketHandler());
-
-        //Tasklist test
-        TaskListManager.taskListItems.add("Some good old sample text for testing");
-        TaskListManager.taskListItems.add("The quick brown fox jumped over the lazy dog");
-
 
         launch(args);
     }
