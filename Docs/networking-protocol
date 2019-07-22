@@ -1,0 +1,47 @@
+Networking protocol
+
+Used in the exchange of information between the server and its clients
+
+It consists of 4 RequestTypes
+    - Get              Client obtaining data from the server
+    - Post             Client uploading data to the server
+    - Update           Server updating data to client(s)
+    - Response         Used to mark a response from the server from the RequestType Get
+
+
+
+Exchange protocol
+
+The standard exchange of information between a new client and server is the following:
+
+	    Client startup
+   Server                            Client 1
+     |  <------------ Get ------------  |      Client requests data stored on the server to present to the user
+     |                                  |
+     |                                  |
+     |  ---------- Response --------->  |      Server replies with the data requested
+     |                                  |
+	    
+	    Client user modifies data
+     |                                  |
+     |  <----------- Post ------------  |      Client posts the modified data to the server
+     |                                  |
+     |                                  |        
+     |                                  |           Other Clients
+     |  ------------ Update --------------------------->  |	    Server updates the data on the other connected
+     |                                  |                 |         clients with the new modified data
+
+
+
+Packet information
+
+All information exchanged utilises the following:
+    JSON (JAvascript Object Notion)
+
+Packet {
+    RequestType requestType;	//One of the 4 RequestType detailed above
+    String[] data;	        //Array of data to be transfered
+    String[] dataIdentifiers;   //Array of identifiers for the data, index of dataIdentifier correlates to the index of the data
+    long timestamp;             //Unix timestamp of when the packet was sent
+    long id;                    //Used to identify sent and received packets by the client
+}

@@ -1,0 +1,36 @@
+Clientside networking process
+
+How a networking operation is handled from the renderer process
+Implements the concepts from networking-protocol
+
+Renderer and main are processes within electron
+
+
+	    -Send-
+Renderer		  Main	                   Server
+   | --- requestType, --->  |  --- requestType, --->  |
+   |     data,              |      data,              |
+   |     dataIdentifiers    |      dataIdentifiers,   |
+   |                        |      timestamp,         |
+   |                        |      id                 |
+
+1. Renderer process first emits a "networking-send" event along with its 3 parameters
+   requestType, data(if applicable), dataIdentifiers
+
+2. Main process receives the "networking-send" event and attaches a timestamp and id,
+   serializing everything into JSON and sending it to the server
+
+
+	    -Receive-
+Server                    Main                    Renderer
+  | --- requestType, --->  | --- data, ----------->  |
+  |     data,              |     dataIdentifiers     |
+  |     dataIdentifiers,   |                         |
+  |     timestamp,         |                         |
+  |     id                 |                         |
+
+1. Server sends back reply packet in JSON
+
+2. Main process deserializes received packet, utilises the id to determine which
+   renderer process to send the received data and dataIdentifiers to via a reply to the
+   "networking-send" event, initiated by the send process
