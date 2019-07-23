@@ -12,6 +12,7 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
+import networking.SettingMenu;
 import storage.ApplicationData;
 import taskList.TaskListManager;
 import weather.OpenWeatherMapFacade;
@@ -58,8 +59,12 @@ public class Controller implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        dayProgressionBar.setProgress(0.25);
+        //Open the startup stage to get the networking hostname and port
+        SettingMenu.showSettingsScene();
 
+        //-----------------------------
+        //Initialize display elements
+        dayProgressionBar.setProgress(0.25);
         //Clock
         updateTime();
 
@@ -74,7 +79,6 @@ public class Controller implements Initializable {
 
         //Schedule bar
         initializeScheduleBar();
-
         initializeDayProgressionBar();
     }
 

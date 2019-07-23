@@ -12,9 +12,9 @@ var NetworkingPacket = (function () {
     return NetworkingPacket;
 }());
 var NetworkingConfig = (function () {
-    function NetworkingConfig() {
-        this.hostname = "localhost";
-        this.port = 4999;
+    function NetworkingConfig(hostname, port) {
+        this.hostname = hostname;
+        this.port = port;
     }
     return NetworkingConfig;
 }());
@@ -25,12 +25,11 @@ var NetworkManager = (function () {
         var net = require("net");
         this.networkClient = new net.Socket();
         this.window = window;
-        this.networkConfig = new NetworkingConfig();
+        this.networkConfig = new NetworkingConfig("", 0);
         this.queuedRequests = [];
         this.networkingId = 0;
         this.callback = callback;
         this.initialize();
-        this.connect();
     }
     NetworkManager.prototype.initialize = function () {
         var _this = this;

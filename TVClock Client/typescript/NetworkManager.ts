@@ -22,8 +22,12 @@ class NetworkingPacket {
 }
 
 class NetworkingConfig {
-    hostname: string = "localhost";
-    port: number = 4999;
+    hostname: string;
+    port: number;
+    constructor(hostname: string, port: number) {
+        this.hostname = hostname;
+        this.port = port;
+    }
 }
 
 export class NetworkManager {
@@ -42,14 +46,14 @@ export class NetworkManager {
         this.networkClient = new net.Socket();
         this.window = window;
 
-        this.networkConfig = new NetworkingConfig();
+        this.networkConfig = new NetworkingConfig("", 0);
+
         this.queuedRequests = [];
         this.networkingId = 0;
         this.callback = callback;
 
         //Start networking
         this.initialize();
-        this.connect();
     }
 
     initialize() {

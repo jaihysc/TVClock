@@ -50,6 +50,15 @@ public class Connection implements IConnectionListeners {
         Out.println(message);
     }
 
+    @Override
+    public void disconnect() {
+        try {
+            socket.close();
+        } catch (IOException e) {
+            logMessage("Failed to disconnect");
+        }
+    }
+
     /**
      * Returns whether or not the current connection is active
      * @return active status

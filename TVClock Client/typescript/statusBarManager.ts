@@ -4,12 +4,12 @@ import { ipcRenderer } from "electron"; //Used to send data to main
 import {NetworkingStatus, NetworkOperation} from "./RequestTypes";
 
 //Networking button and text
-let connectionRefreshButton = document.getElementById("connection-refresh");
-let connectionStatusText = document.getElementById("connection-status");
+let connectionRefreshButton = $("#connection-refresh");
+let connectionStatusText = $("#connection-status");
 
 //Handle connection bar refresh button clicks
 if (connectionRefreshButton != null) {
-    connectionRefreshButton.addEventListener("click", () =>
+    connectionRefreshButton.on("click", () =>
     {
         //Send to main to retry networking
         ipcRenderer.send(NetworkOperation.Reconnect, true);
@@ -28,16 +28,16 @@ ipcRenderer.on(NetworkingStatus.SetStatus, (event: any, data: string) => {
     if (connectionStatusText != null) {
         switch (data) {
             case "connecting":
-                connectionStatusText.innerHTML = "Connecting...";
-                connectionStatusText.style.color = "white";
+                connectionStatusText.html("Connecting...");
+                connectionStatusText.css("color", "white");
                 break;
             case "connected":
-                connectionStatusText.innerHTML = "Connected";
-                connectionStatusText.style.color = "limegreen";
+                connectionStatusText.html("Connected");
+                connectionStatusText.css("color", "limegreen");
                 break;
             case "disconnected":
-                connectionStatusText.innerHTML = "Disconnected";
-                connectionStatusText.style.color = "darkgray";
+                connectionStatusText.html("Disconnected");
+                connectionStatusText.css("color", "darkgray");
                 break;
             default:
                 console.log("An invalid networking-status was received");

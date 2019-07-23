@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
 var RequestTypes_1 = require("./RequestTypes");
-var connectionRefreshButton = document.getElementById("connection-refresh");
-var connectionStatusText = document.getElementById("connection-status");
+var connectionRefreshButton = $("#connection-refresh");
+var connectionStatusText = $("#connection-status");
 if (connectionRefreshButton != null) {
-    connectionRefreshButton.addEventListener("click", function () {
+    connectionRefreshButton.on("click", function () {
         electron_1.ipcRenderer.send(RequestTypes_1.NetworkOperation.Reconnect, true);
     });
 }
@@ -18,16 +18,16 @@ electron_1.ipcRenderer.on(RequestTypes_1.NetworkingStatus.SetStatus, function (e
     if (connectionStatusText != null) {
         switch (data) {
             case "connecting":
-                connectionStatusText.innerHTML = "Connecting...";
-                connectionStatusText.style.color = "white";
+                connectionStatusText.html("Connecting...");
+                connectionStatusText.css("color", "white");
                 break;
             case "connected":
-                connectionStatusText.innerHTML = "Connected";
-                connectionStatusText.style.color = "limegreen";
+                connectionStatusText.html("Connected");
+                connectionStatusText.css("color", "limegreen");
                 break;
             case "disconnected":
-                connectionStatusText.innerHTML = "Disconnected";
-                connectionStatusText.style.color = "darkgray";
+                connectionStatusText.html("Disconnected");
+                connectionStatusText.css("color", "darkgray");
                 break;
             default:
                 console.log("An invalid networking-status was received");

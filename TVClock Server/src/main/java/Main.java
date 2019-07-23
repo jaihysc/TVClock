@@ -2,30 +2,35 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
-import networking.ConnectionManager;
-import networking.PacketHandler;
+import javafx.stage.StageStyle;
+import networking.SettingMenu;
 
 
 public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
-        Parent root = FXMLLoader.load(getClass().getResource("layout/Main.fxml"));
-
         primaryStage.setTitle("TVClock Server");
+        primaryStage.initStyle(StageStyle.UNDECORATED);
 
-//        primaryStage.initStyle(StageStyle.UNDECORATED); //TODO, uncomment this to remove borders in production
-        Scene scene = new Scene(root, 1920, 1080);
-        scene.getStylesheets().add("layout/MainStyle.css");
-        primaryStage.setScene(scene);
+        Parent root = FXMLLoader.load(getClass().getResource("layout/Main.fxml"));
+        Scene mainScene = new Scene(root, 1920, 1080);
+
+        mainScene.getStylesheets().add("layout/MainStyle.css");
+
+        //Listen for S key to open the settings menu
+        mainScene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.S) {
+                SettingMenu.showSettingsScene();
+            }
+        });
+        primaryStage.setScene(mainScene);
         primaryStage.show();
     }
 
     public static void main(String[] args) {
-        //Networking
-        ConnectionManager.startNetworking(4999, new PacketHandler());
-
         launch(args);
     }
 }

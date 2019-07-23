@@ -14,16 +14,34 @@ import java.util.List;
 public class ConnectionManager {
     private static long id = 0; //Used to identify each connection
 
+    private static Thread activeConnectionManager = null;
     private static List<IConnectionListeners> connections = new ArrayList<>();
 
     /**
      * Begins handling transfer of data between this application and clients
      * @param portNumber port to listen on
      */
-    public static void startNetworking(int portNumber, IMessageReceived messageHandler) {
-        System.out.println("Networking | Initializing networking...");
+    public static void startConnectionManager(int portNumber, IMessageReceived messageHandler) {
+        //Terminate the last connection manager
+        if (activeConnectionManager != null) {
+            System.out.println("Networking | Old Connection Manager exiting");
+            activeConnectionManager.interrupt();
 
-        new Thread(() -> {
+            //Disconnect all sockets and clear connection list
+            for (IConnectionListeners c : connections) {
+                c.disconnect();
+            }
+            connections.clear();
+            id = 0; //Reset client thread id
+        }
+
+        System.out.println("Networking | Initializing connection manager on port " + portNumber);
+        activeConnectionManager = new Thread(acceptConnections(portNumber, messageHandler));
+        activeConnectionManager.start();
+    }
+
+    private static Runnable acceptConnections(int portNumber, IMessageReceived messageHandler) {
+        return () -> {
             try {
                 ServerSocket serverSocket = new ServerSocket(portNumber);
 
@@ -45,7 +63,7 @@ public class ConnectionManager {
             } catch (IOException e) {
                 System.out.println("Networking | Error initializing networking");
             }
-        }).start();
+        };
     }
 
     /**
@@ -68,7 +86,7 @@ public class ConnectionManager {
         List<IConnectionListeners> newConnections = new ArrayList<>();
         List<IConnectionListeners> synchronizedConnections = Collections.synchronizedList(connections);
 
-        //Synchronise since startNetworking runs in a thread
+        //Synchronise since startConnectionManager runs in a thread
         synchronized (synchronizedConnections) {
             for (IConnectionListeners connection : synchronizedConnections) {
                 if (connection.isActive())
