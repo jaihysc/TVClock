@@ -1,6 +1,7 @@
 //Renderer
 
 import { ipcRenderer } from "electron"; //Used to send data to main
+import {NetworkingStatus, NetworkOperation} from "./RequestTypes";
 
 //Networking button and text
 let connectionRefreshButton = document.getElementById("connection-refresh");
@@ -11,16 +12,19 @@ if (connectionRefreshButton != null) {
     connectionRefreshButton.addEventListener("click", () =>
     {
         //Send to main to retry networking
-        ipcRenderer.send("networking-reconnect", true);
+        ipcRenderer.send(NetworkOperation.Reconnect, true);
     });
 }
 
-ipcRenderer.on("networking-display-address", (event: any, data: {hostname: string; port: string}) => {
+
+ipcRenderer.on(NetworkOperation.SetDisplayAddress, (event: any, data: {hostname: string; port: string}) => {
+    if (data.hostname == "localhost")
+        data.hostname = "127.0.0.1";
     $("#connected-server-address").html(`${data.hostname}:${data.port}`);
 });
 
 //Handle the appearance of the status bar depending on networking condition
-ipcRenderer.on("networking-status", (event: any, data: string) => {
+ipcRenderer.on(NetworkingStatus.SetStatus, (event: any, data: string) => {
     if (connectionStatusText != null) {
         switch (data) {
             case "connecting":

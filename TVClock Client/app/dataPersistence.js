@@ -13,14 +13,11 @@ var dataNode = (function () {
 var headNode = new dataNode();
 electron_1.ipcMain.on("data-save", function (event, arg) {
     dataAdd(arg.identifier, arg.data);
+    event.returnValue = undefined;
 });
 electron_1.ipcMain.on("data-retrieve", function (event, identifier) {
     var foundNode = binaryNodeSearch(headNode, identifier);
-    if (foundNode == undefined) {
-        event.returnValue = undefined;
-        return;
-    }
-    if (foundNode.identifier != identifier) {
+    if (foundNode == undefined || foundNode.identifier != identifier) {
         event.returnValue = undefined;
         return;
     }

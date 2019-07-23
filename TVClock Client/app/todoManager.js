@@ -18,17 +18,18 @@ var tasks = [];
 var selectedTaskIndex = -1;
 var tasksIdentifier = "todo-view-tasks";
 $(function () {
-    var fetchedFromServer = electron_1.ipcRenderer.sendSync(RequestTypes_1.LocalStorageOperation.Fetch, "todo-view-fetchedFromServer");
+    var fetchedFromServerIdentifier = "todo-view-fetchedFromServer";
+    var fetchedFromServer = electron_1.ipcRenderer.sendSync(RequestTypes_1.LocalStorageOperation.Fetch, fetchedFromServerIdentifier);
+    electron_1.ipcRenderer.on(RequestTypes_1.NetworkOperation.Reconnect, function () {
+        electron_1.ipcRenderer.sendSync(RequestTypes_1.LocalStorageOperation.Save, { identifier: fetchedFromServerIdentifier, data: undefined });
+        $(".nav-item a")[0].click();
+    });
     var data = [];
-    if (fetchedFromServer == undefined) {
-        electron_1.ipcRenderer.once("main-ready", function () {
-            if (fetchedFromServer == undefined) {
-                var jsonData = electron_1.ipcRenderer.sendSync(RequestTypes_1.NetworkOperation.Send, { requestType: RequestTypes_1.RequestType.Get, identifiers: [tasksIdentifier] });
-                data = JSON.parse(jsonData.data[0]);
-                electron_1.ipcRenderer.send(RequestTypes_1.LocalStorageOperation.Save, { identifier: "todo-view-fetchedFromServer", data: true });
-                updateTasks(data, false);
-            }
-        });
+    if (fetchedFromServer == undefined || !fetchedFromServer) {
+        var jsonData = electron_1.ipcRenderer.sendSync(RequestTypes_1.NetworkOperation.Send, { requestType: RequestTypes_1.RequestType.Get, identifiers: [tasksIdentifier] });
+        data = JSON.parse(jsonData.data[0]);
+        electron_1.ipcRenderer.send(RequestTypes_1.LocalStorageOperation.Save, { identifier: fetchedFromServerIdentifier, data: true });
+        updateTasks(data, false);
     }
     else {
         data = electron_1.ipcRenderer.sendSync(RequestTypes_1.LocalStorageOperation.Fetch, tasksIdentifier);

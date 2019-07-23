@@ -14,6 +14,8 @@ import java.net.Socket;
 public class Connection implements IConnectionListeners {
     private PrintWriter Out;
     private BufferedReader In;
+    private Socket socket;
+
     private Gson gson = new Gson(); //For handling json
 
     private long id;
@@ -29,6 +31,7 @@ public class Connection implements IConnectionListeners {
         try {
             Out = new PrintWriter(socket.getOutputStream(), true);
             In = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            this.socket = socket;
 
             handleMessages(messageHandler);
 
@@ -78,6 +81,7 @@ public class Connection implements IConnectionListeners {
                         //Initiator closed
                         logMessage("Client connection closed, thread terminating");
                         connectionActive = false;
+                        socket.close();
                         break;
                     }
 

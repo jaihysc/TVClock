@@ -37,13 +37,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 var _this = this;
 Object.defineProperty(exports, "__esModule", { value: true });
 var electron_1 = require("electron");
-var electron_2 = require("electron");
+var NetworkManager_1 = require("./NetworkManager");
 var RequestTypes_1 = require("./RequestTypes");
 var mainWindow;
-var net = require("net");
-var networkClient = new net.Socket();
 function createWindow() {
     return __awaiter(this, void 0, void 0, function () {
+        var networkManager;
+        var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -54,18 +54,46 @@ function createWindow() {
                         width: 1920,
                         height: 1080,
                     });
-                    return [4, mainWindow.loadFile("index.html")];
+                    mainWindow.setMenuBarVisibility(false);
+                    return [4, mainWindow.loadFile("startup.html")];
                 case 1:
                     _a.sent();
-                    mainWindow.setMenuBarVisibility(false);
                     mainWindow.webContents.openDevTools();
+                    require("./dataPersistence");
+                    networkManager = new NetworkManager_1.NetworkManager(mainWindow, function () { return __awaiter(_this, void 0, void 0, function () {
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0: return [4, mainWindow.loadFile("index.html")];
+                                case 1:
+                                    _a.sent();
+                                    mainWindow.webContents.send(RequestTypes_1.NetworkingStatus.SetStatus, "connected");
+                                    mainWindow.webContents.send(RequestTypes_1.NetworkOperation.SetDisplayAddress, {
+                                        hostname: networkManager.networkConfig.hostname,
+                                        port: String(networkManager.networkConfig.port)
+                                    });
+                                    return [2];
+                            }
+                        });
+                    }); });
+                    electron_1.ipcMain.on(RequestTypes_1.NetworkOperation.Reconnect, function () {
+                        networkManager.reconnect();
+                    });
+                    electron_1.ipcMain.on(RequestTypes_1.NetworkOperation.Send, function (event, args) {
+                        networkManager.send(event, args.requestType, args.identifiers, args.data);
+                    });
+                    electron_1.ipcMain.on(RequestTypes_1.NetworkOperation.ConfigModify, function (event, arg) {
+                        networkManager.modifyConfig(arg.hostname, arg.port);
+                    });
                     mainWindow.on("closed", function () {
                         console.log("Program exiting...");
                         mainWindow.destroy();
-                        networkDisconnect();
+                        try {
+                            networkManager.disconnect();
+                        }
+                        catch (_a) {
+                        }
                         console.log("Goodbye!");
                     });
-                    initNetworking();
                     return [2];
             }
         });
@@ -90,111 +118,3 @@ electron_1.app.on("activate", function () { return __awaiter(_this, void 0, void
         }
     });
 }); });
-var NetworkingPacket = (function () {
-    function NetworkingPacket(requestType, data, dataIdentifiers, timestamp, id) {
-        this.requestType = requestType;
-        this.data = data;
-        this.dataIdentifiers = dataIdentifiers;
-        this.timestamp = timestamp;
-        this.id = id;
-    }
-    return NetworkingPacket;
-}());
-var NetworkingConfig = (function () {
-    function NetworkingConfig() {
-        this.hostname = "localhost";
-        this.port = 4999;
-    }
-    return NetworkingConfig;
-}());
-var networkConfig = new NetworkingConfig();
-var networkingQueuedRequests = [];
-var networkingId = 0;
-function initNetworking() {
-    networkClient.on("data", function (response) {
-        console.log("Networking | Received: " + response);
-        var returnedPacket;
-        try {
-            returnedPacket = JSON.parse(response.toString());
-        }
-        catch (e) {
-            console.log("Networking | Error handling received message: " + e);
-            return;
-        }
-        if (returnedPacket.requestType == RequestTypes_1.RequestType.Update) {
-            if (returnedPacket.dataIdentifiers == undefined || returnedPacket.data == undefined)
-                return;
-            for (var i = 0; i < returnedPacket.dataIdentifiers.length; ++i) {
-                mainWindow.webContents.send(returnedPacket.dataIdentifiers[i] + "-update", returnedPacket.data[i]);
-            }
-            return;
-        }
-        var foundId = false;
-        for (var i = 0; i < networkingQueuedRequests.length; ++i) {
-            if (networkingQueuedRequests[i].id === returnedPacket.id) {
-                networkingQueuedRequests[i].event.returnValue = { identifiers: returnedPacket.dataIdentifiers, data: returnedPacket.data };
-                networkingQueuedRequests.splice(i, 1);
-                foundId = true;
-                break;
-            }
-        }
-        if (!foundId)
-            console.log("Networking | Received packet with no matching id - Ignoring");
-    });
-    networkClient.on("close", function () {
-        mainWindow.webContents.send("networking-status", "disconnected");
-        console.log("Networking | Connection closed");
-    });
-    networkClient.on("error", function (error) {
-        console.log("Networking | " + error);
-        networkingQueuedRequests.forEach(function (value) {
-            value.event.returnValue = null;
-        });
-        networkingQueuedRequests = [];
-        mainWindow.webContents.send("networking-status", "disconnected");
-    });
-    networkConnect();
-    electron_2.ipcMain.on("networking-reconnect", function (event, arg) {
-        console.log("Networking | Attempting to reconnect");
-        networkConnect();
-    });
-    electron_2.ipcMain.on("networking-send", function (event, args) {
-        var id = networkingId++;
-        var dataJson = [];
-        if (args.data != undefined) {
-            dataJson.push(JSON.stringify(args.data));
-        }
-        var packet = new NetworkingPacket(args.requestType, dataJson, args.identifiers, Date.now(), id);
-        networkingQueuedRequests.push({ id: id, event: event });
-        networkSend(JSON.stringify(packet));
-    });
-    electron_2.ipcMain.on("networking-info-modify", function (event, arg) {
-        networkConfig.port = arg.port;
-        networkConfig.hostname = arg.hostname;
-        networkDisconnect();
-        networkConnect();
-    });
-}
-function networkDisconnect() {
-    console.log("Networking | Disconnecting");
-    networkClient.end();
-}
-function networkConnect() {
-    mainWindow.webContents.send("networking-status", "connecting");
-    console.log("Networking | Connecting");
-    networkClient.connect(networkConfig.port, networkConfig.hostname, function () {
-        console.log("Networking | Connection established");
-        mainWindow.webContents.send("networking-status", "connected");
-        mainWindow.webContents.send("networking-display-address", {
-            hostname: (networkConfig.hostname == "localhost") ? "127.0.0.1" : networkConfig.hostname,
-            port: String(networkConfig.port)
-        });
-        mainWindow.webContents.send("main-ready");
-    });
-}
-function networkSend(str) {
-    return networkClient.write(str + "\r\n", function () {
-        console.log("Networking | Sent: " + str);
-    });
-}
-require("./dataPersistence");

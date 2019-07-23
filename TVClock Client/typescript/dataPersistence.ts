@@ -25,18 +25,14 @@ let headNode: dataNode = new dataNode();
 
 ipcMain.on("data-save", (event: any, arg: { identifier: string; data: any; }) => {
     dataAdd(arg.identifier, arg.data);
+    event.returnValue = undefined;
 });
 
 ipcMain.on("data-retrieve", (event: any, identifier: string) => {
     let foundNode = binaryNodeSearch(headNode, identifier);
 
     //Send back an undefined response if it failed to find a node
-    if (foundNode == undefined) {
-        event.returnValue = undefined;
-        return;
-    }
-
-    if (foundNode.identifier != identifier) {
+    if (foundNode == undefined || foundNode.identifier != identifier) {
         event.returnValue = undefined;
         return;
     }

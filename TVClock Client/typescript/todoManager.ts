@@ -2,7 +2,7 @@
 //Manager for tasks view
 
 import { ipcRenderer } from "electron";
-import { RequestType, NetworkOperation, LocalStorageOperation } from "./RequestTypes";
+import {RequestType, NetworkOperation, LocalStorageOperation, NetworkingStatus} from "./RequestTypes";
 
 //An active task in the task list
 class Task {
@@ -28,23 +28,27 @@ const tasksIdentifier = "todo-view-tasks"; //Identifier for tasks in persistence
 //Networking retrieve stored tasks
 //Wait until the document is ready before running dso the user has something to look at
 $(function() {
-    let fetchedFromServer: boolean = ipcRenderer.sendSync(LocalStorageOperation.Fetch, "todo-view-fetchedFromServer");
+    const fetchedFromServerIdentifier = "todo-view-fetchedFromServer";
+    let fetchedFromServer: boolean = ipcRenderer.sendSync(LocalStorageOperation.Fetch, fetchedFromServerIdentifier);
+
+    ipcRenderer.on(NetworkOperation.Reconnect, () => {
+        //Clear all stored data
+        ipcRenderer.sendSync(LocalStorageOperation.Save, {identifier: fetchedFromServerIdentifier, data: undefined});
+
+        //Refresh the view
+        $( ".nav-item a" )[0].click();
+    });
 
     let data: Task[] = [];
-    if (fetchedFromServer == undefined) {
-        ipcRenderer.once("main-ready", () => { //main-ready is emitted after a connection is established with the server
-            //If undefined, it means no fetch has been sent to the server
-            if (fetchedFromServer == undefined) {
-                //Send fetch request to server
-                let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [tasksIdentifier]});
-                data = JSON.parse(jsonData.data[0]);
+    if (fetchedFromServer == undefined || !fetchedFromServer) {
+        //Send fetch request to server
+        let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [tasksIdentifier]});
+        data = JSON.parse(jsonData.data[0]);
 
-                //Save that a fetch has already been performed to the server
-                ipcRenderer.send(LocalStorageOperation.Save, {identifier: "todo-view-fetchedFromServer", data: true});
+        //Save that a fetch has already been performed to the server
+        ipcRenderer.send(LocalStorageOperation.Save, {identifier: fetchedFromServerIdentifier, data: true});
 
-                updateTasks(data, false);
-            }
-        });
+        updateTasks(data, false);
     } else {
         //Retrieve back stored data from localstorage
         data = ipcRenderer.sendSync(LocalStorageOperation.Fetch, tasksIdentifier);

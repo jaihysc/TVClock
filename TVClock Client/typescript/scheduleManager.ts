@@ -2,7 +2,7 @@
 //Manager for schedule view
 
 import { ipcRenderer } from "electron";
-import invert, { RGB, RgbArray, HexColor, BlackWhite } from "invert-color";
+import invert from "invert-color";
 import {RequestType, NetworkOperation, LocalStorageOperation} from "./RequestTypes";
 
 class ScheduleItemGeneric {
@@ -35,10 +35,19 @@ const periodItemsIdentifier = "schedule-view-periodItems";
 $(function() {
     const fetchFromServerIdentifier = "schedule-view-fetchedFromServer";
 
+    ipcRenderer.on(NetworkOperation.Reconnect, () => {
+        //Clear all stored data
+        ipcRenderer.sendSync(LocalStorageOperation.Save, {identifier: fetchFromServerIdentifier, data: undefined});
+
+        //Refresh the view
+        $( ".nav-item a" )[1].click();
+    });
+
     let fetchedFromServer: boolean = ipcRenderer.sendSync(LocalStorageOperation.Fetch, fetchFromServerIdentifier);
     if (!fetchedFromServer) {
         let retrievedScheduleIData = ipcRenderer.sendSync(NetworkOperation.Send,
             {requestType: RequestType.Get, identifiers: [scheduleItemsIdentifier]});
+
         let retrievedPeriodData = ipcRenderer.sendSync(NetworkOperation.Send,
             {requestType: RequestType.Get, identifiers: [periodItemsIdentifier]});
 

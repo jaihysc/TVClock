@@ -21,6 +21,10 @@ var scheduleItemsIdentifier = "schedule-view-scheduleItems";
 var periodItemsIdentifier = "schedule-view-periodItems";
 $(function () {
     var fetchFromServerIdentifier = "schedule-view-fetchedFromServer";
+    electron_1.ipcRenderer.on(RequestTypes_1.NetworkOperation.Reconnect, function () {
+        electron_1.ipcRenderer.sendSync(RequestTypes_1.LocalStorageOperation.Save, { identifier: fetchFromServerIdentifier, data: undefined });
+        $(".nav-item a")[1].click();
+    });
     var fetchedFromServer = electron_1.ipcRenderer.sendSync(RequestTypes_1.LocalStorageOperation.Fetch, fetchFromServerIdentifier);
     if (!fetchedFromServer) {
         var retrievedScheduleIData = electron_1.ipcRenderer.sendSync(RequestTypes_1.NetworkOperation.Send, { requestType: RequestTypes_1.RequestType.Get, identifiers: [scheduleItemsIdentifier] });

@@ -6,8 +6,20 @@ export enum RequestType {
     Update = "Update", //Server - Update client data from server
 }
 
+export enum NetworkingStatus {
+    SetStatus = "networking-status",
+    Ready = "ready",
+    Data = "data",
+    Close = "close",
+    Error = "error",
+}
+
 export enum NetworkOperation {
-    Send = "networking-send"
+    Send = "networking-send",
+    Reconnect = "networking-reconnect",
+    ConfigModify = "networking-info-modify",
+    SetDisplayAddress = "networking-display-address"
+
 }
 
 export enum LocalStorageOperation {

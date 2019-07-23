@@ -1,13 +1,8 @@
-import {app, BrowserWindow, ipcRenderer} from "electron";
-import { ipcMain } from "electron";
-import { RequestType } from "./RequestTypes";
-import {domainToASCII} from "url";
+import {app, BrowserWindow, ipcMain} from "electron";
+import {NetworkManager} from "./NetworkManager";
+import {NetworkingStatus, NetworkOperation, RequestType} from "./RequestTypes";
 
 let mainWindow: BrowserWindow;
-
-//Networking
-let net = require("net");
-let networkClient = new net.Socket();
 
 async function createWindow() {
     mainWindow = new BrowserWindow({
@@ -18,11 +13,39 @@ async function createWindow() {
         height: 1080,
     });
 
-    await mainWindow.loadFile("index.html");
     mainWindow.setMenuBarVisibility(false);
+    await mainWindow.loadFile("startup.html");
 
     // Open the DevTools.
     mainWindow.webContents.openDevTools();
+
+    require("./dataPersistence");
+
+    //Networking
+    let networkManager = new NetworkManager(mainWindow, async () => {
+        //Load pages once connection is established
+        await mainWindow.loadFile("index.html");
+        mainWindow.webContents.send(NetworkingStatus.SetStatus, "connected");
+        mainWindow.webContents.send(NetworkOperation.SetDisplayAddress,{
+            hostname: networkManager.networkConfig.hostname,
+            port: String(networkManager.networkConfig.port)}
+        );
+    });
+
+    //Event handlers from renderer process
+    ipcMain.on(NetworkOperation.Reconnect, () => {
+        networkManager.reconnect();
+    });
+
+    //Sends specified identifiers with RequestType and returns the response
+    ipcMain.on(NetworkOperation.Send, (event: any, args: { requestType: RequestType; identifiers: any[]; data: any[]}) => {
+        networkManager.send(event, args.requestType, args.identifiers, args.data);
+    });
+
+    //Allow for changing of port + hostname
+    ipcMain.on(NetworkOperation.ConfigModify, (event: any, arg: { port: number; hostname: string; }) => {
+        networkManager.modifyConfig(arg.hostname, arg.port)
+    });
 
     // Window close
     mainWindow.on("closed", () => {
@@ -34,13 +57,13 @@ async function createWindow() {
         mainWindow.destroy();
 
         //Close networking connections
-        networkDisconnect();
+        try {
+            networkManager.disconnect();
+        } catch {
+        }
 
         console.log("Goodbye!");
     });
-
-    //Setup networking
-    initNetworking();
 }
 
 // electron has finished initialization
@@ -65,169 +88,5 @@ app.on("activate", async () => {
     }
 });
 
-//---------------------------------
-//Networking
-//Handles communication between the client and server
-
-//Class to serialize / deserialize responses to and from the server
-class NetworkingPacket {
-    requestType: String | undefined;
-    data: string[] | undefined;
-    dataIdentifiers: string[] | undefined;
-    timestamp: number | undefined;
-    id: number; //Used for identifying the response, which will be on the same id
-
-    constructor(requestType: RequestType, data: string[], dataIdentifiers: string[], timestamp: number, id: number) {
-        this.requestType = requestType;
-        this.data = data;
-        this.dataIdentifiers = dataIdentifiers;
-        this.timestamp = timestamp;
-        this.id = id;
-    }
-}
-
-class NetworkingConfig {
-    hostname: string = "localhost";
-    port: number = 4999;
-}
-
-let networkConfig = new NetworkingConfig();
-let networkingQueuedRequests: {id: number; event: any}[] = [];
-let networkingId: number = 0;
-
-function initNetworking() {
-    networkClient.on("data", function(response: Buffer) {
-        console.log("Networking | Received: " + response);
-        let returnedPacket: NetworkingPacket;
-        try {
-            returnedPacket = JSON.parse(response.toString());
-
-        } catch (e) {
-            console.log("Networking | Error handling received message: " + e);
-            return;
-        }
-
-        //Handle update requests from the server
-        if (returnedPacket.requestType == RequestType.Update) {
-            if (returnedPacket.dataIdentifiers == undefined || returnedPacket.data == undefined)
-                return;
-
-            for (let i = 0; i < returnedPacket.dataIdentifiers.length; ++ i) {
-                //Update requests will use the channel specified by dataIdentifiers with "-update" appended at the end
-                //schedule-view-scheduleItems would become schedule-view-scheduleItems-update
-                mainWindow.webContents.send(
-                    returnedPacket.dataIdentifiers[i] + "-update", returnedPacket.data[i]);
-            }
-            return;
-        }
-
-        let foundId = false;
-        //Find event matching returnedVal id
-        for (let i = 0; i < networkingQueuedRequests.length; ++i) {
-            if (networkingQueuedRequests[i].id === returnedPacket.id) {
-                //Return deserialized server response to caller
-                //Note the data is still in json as it is stored in a string array
-                networkingQueuedRequests[i].event.returnValue = {identifiers: returnedPacket.dataIdentifiers, data: returnedPacket.data};
-
-                networkingQueuedRequests.splice(i, 1); //Remove networkingRequests element after fulfilling request
-                foundId = true;
-                break;
-            }
-        }
-
-        if (!foundId)
-            console.log("Networking | Received packet with no matching id - Ignoring");
-    });
-
-    networkClient.on("close", function() {
-        mainWindow.webContents.send("networking-status", "disconnected");
-        console.log("Networking | Connection closed");
-    });
-
-    networkClient.on("error", (error: string) => {
-        console.log("Networking | " + error);
-
-        //Return null to all networking-send events
-        networkingQueuedRequests.forEach(value => {
-            value.event.returnValue = null;
-        });
-        networkingQueuedRequests = []; //clear queued requests
-
-        mainWindow.webContents.send("networking-status", "disconnected");
-    });
-
-    //Start networking
-    networkConnect();
-
-    //Event handlers for reconnect and send from renderer process
-    ipcMain.on("networking-reconnect", (event: any, arg: string) => {
-        console.log("Networking | Attempting to reconnect");
-        networkConnect();
-    });
-
-    //Sends specified identifiers with RequestType and returns the response
-    ipcMain.on("networking-send", (event: any, args: { requestType: RequestType; identifiers: any[]; data: any[]}) => {
-        let id = networkingId++;
-
-        let dataJson: string[] = [];
-        //Serialize data into string arrays first
-        if (args.data != undefined) {
-            dataJson.push(JSON.stringify(args.data));
-        }
-
-        let packet = new NetworkingPacket(args.requestType, dataJson, args.identifiers, Date.now(), id);
-
-        //Log the return event in an array for a data reply
-        networkingQueuedRequests.push({id: id, event: event});
-
-        //Serialize into json string and send it to the server
-        networkSend(JSON.stringify(packet));
-    });
-
-    //Allow for changing of port + hostname
-    ipcMain.on("networking-info-modify", (event: any, arg: { port: number; hostname: string; }) => {
-        //Should receive hostname + port
-        networkConfig.port = arg.port;
-        networkConfig.hostname = arg.hostname;
-
-        //Reconnect with new settings
-        networkDisconnect();
-        networkConnect();
-    })
-}
-
-function networkDisconnect() {
-    console.log("Networking | Disconnecting");
-    networkClient.end();
-}
-
-function networkConnect() {
-    mainWindow.webContents.send("networking-status", "connecting");
-    console.log("Networking | Connecting");
-
-    //Attempt to establish connection on specified port
-    networkClient.connect(networkConfig.port, networkConfig.hostname, () => {
-        console.log("Networking | Connection established");
-        //connection established
-
-        mainWindow.webContents.send("networking-status", "connected");
-
-        mainWindow.webContents.send("networking-display-address",{
-                hostname: (networkConfig.hostname == "localhost") ? "127.0.0.1" : networkConfig.hostname,
-                port: String(networkConfig.port)}
-        );
-
-        mainWindow.webContents.send("main-ready"); //Inform that network is established
-    });
-}
-
-function networkSend(str: string) {
-    return networkClient.write(str + "\r\n", () => { //Make sure to include \r\n so the server recognises it as a message
-        console.log("Networking | Sent: " + str);
-    });
-}
-
-
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
-require("./dataPersistence");
