@@ -3,23 +3,40 @@
 
 import { ipcRenderer } from "electron";
 import {NetworkOperation} from "./RequestTypes";
+import {IViewController} from "./viewManager";
 
-let networkingHostname = $("#networking-hostname");
-let networkingPort = $("#networking-port");
-let networkingUpdateBtn = $("#networking-info-update-btn");
+export class SettingViewManager implements IViewController {
+    networkingHostname = $(`#networking-hostname`);
+    networkingPort = $(`#networking-port`);
+    networkingUpdateBtn = $(`#networking-info-update-btn`);
 
-//Updating networking status with refresh button click
-networkingUpdateBtn.on("click", () => {
-    if (networkingHostname != null)
-    ipcRenderer.send(NetworkOperation.ConfigModify,
-        {hostname: String(networkingHostname.val()), port: Number(networkingPort.val())}
-    );
+    initialize(): void {
+        this.networkingHostname = $("#networking-hostname");
+        this.networkingPort = $("#networking-port");
+        this.networkingUpdateBtn = $("#networking-info-update-btn");
+    }
 
-    let hostname = networkingHostname.val();
-    if (hostname == "localhost")
-        hostname = "127.0.0.1";
+    preload(): void {
+        //Updating networking status with refresh button click
+        this.networkingUpdateBtn.on("click", () => {
+            if (this.networkingHostname != null)
+                ipcRenderer.send(NetworkOperation.ConfigModify,
+                    {hostname: String(this.networkingHostname.val()), port: Number(this.networkingPort.val())}
+                );
 
-    ipcRenderer.send("networking-display-address",
-        {hostname: hostname, port: Number(networkingPort.val())}
-    );
-});
+            let hostname = this.networkingHostname.val();
+            if (hostname == "localhost")
+                hostname = "127.0.0.1";
+
+            ipcRenderer.send("networking-display-address",
+                {hostname: hostname, port: Number(this.networkingPort.val())}
+            );
+        });
+    }
+
+    load(): void {
+        $(() => {
+            //todo, stuff here
+        })
+    }
+}
