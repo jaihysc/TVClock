@@ -21,46 +21,45 @@ class NetworkingPacket {
     }
 }
 
-class NetworkingConfig {
-    hostname: string;
-    port: number;
-    constructor(hostname: string, port: number) {
-        this.hostname = hostname;
-        this.port = port;
-    }
-}
-
 export class NetworkManager {
-    networkClient: Socket;
     window: BrowserWindow;
-
-    networkConfig: NetworkingConfig;
-    queuedRequests: {id: number; event: any}[]; //Array of send packets awaiting a response
-    networkingId: number = 0;
-    callback: () => void; //Function returning void
+    connection: Connection;
 
     networkConnected: boolean = false;
+    readyCallbackUsed: boolean = false; //Whether the initial ready callback was used
 
-    constructor(window: BrowserWindow, callback: () => void) {
-        let net = require("net");
-        this.networkClient = new net.Socket();
+    queuedRequests: {id: number; event: any}[]; //Array of send packets awaiting a response
+    networkingId: number = 0; //Keeps track of send and received requests
+
+    connectionId: number = 0; //Keeps track of current active connection to avoid listening to events
+                                // emitted after a connection has been discarded
+    activeConnectionId: number = 0; //Id of active connection, automatically set to the id of the highest connectionId
+                                //connection when it emits an event
+
+    hostname: string = "";
+    port: number = 0;
+
+    readyCallback: () => void;
+    dataCallback: (id: number, response: Buffer) => void;
+    closeCallback: (id: number) => void;
+    errorCallback: (id: number, str: string) => void;
+
+    constructor(window: BrowserWindow, ready: () => void) {
         this.window = window;
-
-        this.networkConfig = new NetworkingConfig("", 0);
 
         this.queuedRequests = [];
         this.networkingId = 0;
-        this.callback = callback;
 
-        //Start networking
-        this.initialize();
-    }
-
-    initialize() {
-        //Events
-        this.networkClient.on(NetworkingStatus.Data, (response: Buffer) => {
-            if (response == undefined)
+        this.readyCallback = () => {
+            if (!this.readyCallbackUsed) {
+                this.readyCallbackUsed = true;
+                ready();
+            }
+        };
+        this.dataCallback = (id: number, response: Buffer) => {
+            if (response == undefined || id < this.activeConnectionId) //Ignore old connection's events
                 return;
+            this.checkConnectionId(id);
 
             console.log("Networking | Received: " + response);
 
@@ -102,21 +101,21 @@ export class NetworkManager {
 
             if (!foundId)
                 console.log("Networking | Received packet with no matching id - Ignoring");
-        });
+        };
+        this.closeCallback = (id: number) => {
+            if (id < this.activeConnectionId)
+                return;
+            this.checkConnectionId(id);
 
-        //Run the callback only once after the first initial connection
-        this.networkClient.once(NetworkingStatus.Ready, () => {
-            this.callback();
-        });
-
-        this.networkClient.on(NetworkingStatus.Close, () => {
             console.log("Networking | Connection closed");
-            this.disconnect();
             this.window.webContents.send(NetworkingStatus.SetStatus, "disconnected");
-        });
+        };
+        this.errorCallback = (id: number, str: string) => {
+            if (id < this.activeConnectionId)
+                return;
+            this.checkConnectionId(id);
 
-        this.networkClient.on(NetworkingStatus.Error, (error: string) => {
-            console.log("Networking | " + error);
+            console.log("Networking | " + str);
             this.disconnect();
 
             //Return null to all networking-send events
@@ -126,13 +125,19 @@ export class NetworkManager {
             this.queuedRequests = []; //clear queued requests
 
             this.window.webContents.send(NetworkingStatus.SetStatus, "disconnected");
-        });
+        };
+
+        this.connection = new Connection(this.connectionId++, this.readyCallback, this.dataCallback, this.closeCallback, this.errorCallback);
+    }
+
+    private checkConnectionId(id: number) {
+        if (id > this.activeConnectionId)
+            this.activeConnectionId = id;
     }
 
     send(event: any, requestType: RequestType, identifiers: string[], data: any[]) {
-        if (!this.networkConnected) {
-            //Return undefined because we are not connected
-            event.returnValue = undefined;
+        if (!this.networkConnected || this.connection == undefined) {
+            event.returnValue = undefined; //Return undefined because we are not connected
             return;
         }
 
@@ -144,78 +149,113 @@ export class NetworkManager {
             dataJson.push(JSON.stringify(data));
         }
 
-        let packet = new NetworkingPacket(requestType, dataJson, identifiers, Date.now(), id);
-
         //Log the return event in an array for a data reply
         this.queuedRequests.push({id: id, event: event});
 
         //Serialize into json string and send it to the server
-        let str = JSON.stringify(packet);
-        this.sendString(str);
-    }
-
-    sendString(str: string) {
-        // console.log("Networking | Buffering: " + str);
-        this.networkClient.write(str + "\r\n", () => { //Make sure to include \r\n so the server recognises it as a message
+        let str = JSON.stringify(new NetworkingPacket(requestType, dataJson, identifiers, Date.now(), id));
+        this.connection.sendString(str, () => {
             console.log("Networking | Sent: " + str);
         });
     }
 
     modifyConfig(hostname: string, port: number) {
-        this.networkConfig.hostname = hostname;
-        this.networkConfig.port = port;
+        this.hostname = hostname;
+        this.port = port;
 
         //Reconnect with new settings
         this.reconnect();
     }
 
     connect() {
-        if (this.networkConnected)
+        if (this.networkConnected || this.connection == undefined)
             return;
 
         console.log("Networking | Connecting");
         this.window.webContents.send(NetworkingStatus.SetStatus, "connecting");
 
         //Attempt to establish connection on specified port
-        this.networkClient.connect(this.networkConfig.port, this.networkConfig.hostname, () => {
+        this.connection.connect(this.hostname, this.port, () => {
             console.log("Networking | Connection established");
+            this.checkConnectionId(this.connection.id);
 
             this.networkConnected = true;
 
             this.window.webContents.send(NetworkingStatus.SetStatus, "connected");
+
+            //Sets the visible connected address display. e.g 127.0.0.1:4999
             this.window.webContents.send(NetworkOperation.SetDisplayAddress,{
-                hostname: this.networkConfig.hostname,
-                port: String(this.networkConfig.port)}
+                hostname: this.hostname,
+                port: String(this.port)}
             );
         });
     }
 
     disconnect() {
-        if (!this.networkConnected) //Nothing to disconnect from if never connected
+        if (!this.networkConnected || this.connection == undefined) //Nothing to disconnect from if never connected
             return;
 
         console.log("Networking | Disconnecting");
         this.networkConnected = false;
-        this.networkClient.end();
+        this.connection.disconnect();
     }
 
+    //Disconnects and reestablishes a connection, emitting a Reconnect event for views to refresh their data
     reconnect() {
         //Do not await for connection close if connection is already closed
-        if (this.networkConnected) {
+        if (this.networkConnected && this.connection != undefined) {
             this.disconnect();
-            this.networkClient.once(NetworkingStatus.Close, () => {
-                this.connectWithEvent();
-            });
+            this.reconnectConnection();
         } else {
-            this.connectWithEvent();
+            this.reconnectConnection();
         }
     }
 
-    private connectWithEvent() {
-        this.connect();
-        this.networkClient.once(NetworkingStatus.Ready, () => {
-            //Send reconnect event out so views can refresh their data
+    private reconnectConnection() {
+        this.connection = new Connection(this.connectionId++, () => {
+            this.readyCallback(); //Check whether or not initial ready callback has ran,
             this.window.webContents.send(NetworkOperation.Reconnect);
-        });
+
+        }, this.dataCallback, this.closeCallback, this.errorCallback);
+        this.connect();
+    }
+}
+
+class Connection {
+    networkClient: Socket;
+    id: number;
+
+    constructor(id: number,
+                ready: (id: number) => void, data: (id: number, response: Buffer) => void,
+                close: (id: number) => void, error: (id: number, str: string) => void) {
+        let net = require("net");
+        this.networkClient = new net.Socket();
+        this.id = id;
+
+        //Run the callback only once after the first initial connection
+        this.networkClient.on(NetworkingStatus.Ready,
+            () => { ready(this.id); });
+
+        this.networkClient.on(NetworkingStatus.Data,
+            (response: Buffer) => { data(this.id, response) });
+
+        this.networkClient.on(NetworkingStatus.Close,
+            () => { close(this.id); });
+
+        this.networkClient.on(NetworkingStatus.Error,
+            (str: string) => { error(this.id, str); });
+    }
+
+    sendString(str: string, callback: () => void) {
+        this.networkClient.write(str + "\r\n", callback);
+    }
+
+    connect(hostname: string, port: number, callback: () => void) {
+        //Attempt to establish connection on specified port
+        this.networkClient.connect(port, hostname, callback);
+    }
+
+    disconnect() {
+        this.networkClient.end();
     }
 }

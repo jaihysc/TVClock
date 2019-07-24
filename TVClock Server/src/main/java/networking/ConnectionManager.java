@@ -15,6 +15,8 @@ public class ConnectionManager {
     private static long id = 0; //Used to identify each connection
 
     private static Thread activeConnectionManager = null;
+    private static ServerSocket serverSocket = null;
+
     private static List<IConnectionListeners> connections = new ArrayList<>();
 
     /**
@@ -25,6 +27,11 @@ public class ConnectionManager {
         //Terminate the last connection manager
         if (activeConnectionManager != null) {
             System.out.println("Networking | Old Connection Manager exiting");
+            try {
+                serverSocket.close();
+            } catch (IOException e) {
+                System.out.println("Networking | Error closing old Connection Manager");
+            }
             activeConnectionManager.interrupt();
 
             //Disconnect all sockets and clear connection list
@@ -38,14 +45,15 @@ public class ConnectionManager {
         System.out.println("Networking | Initializing connection manager on port " + portNumber);
         activeConnectionManager = new Thread(acceptConnections(portNumber, messageHandler));
         activeConnectionManager.start();
+        System.out.println("Networking | Initializing connection manager on port " + portNumber + " Done");
     }
 
     private static Runnable acceptConnections(int portNumber, IMessageReceived messageHandler) {
         return () -> {
             try {
-                ServerSocket serverSocket = new ServerSocket(portNumber);
+                serverSocket = new ServerSocket(portNumber);
 
-                while (true) {
+                while (!Thread.currentThread().isInterrupted()) {
                     try {
                         //Constantly accept new connections via the port, then create a connection thread to manage each one
                         Socket socket = serverSocket.accept();
@@ -55,9 +63,9 @@ public class ConnectionManager {
                         synchronized (synchronizedConnections) {
                             synchronizedConnections.add(new Connection(socket, messageHandler, id++));
                         }
-
                     } catch (IOException e) {
-                        System.out.println("Networking | Error creating connection thread");
+                        if (!Thread.currentThread().isInterrupted()) //Do not print errors if this thread is exiting
+                            System.out.println("Networking | Error creating connection thread");
                     }
                 }
             } catch (IOException e) {

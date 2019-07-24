@@ -11,31 +11,29 @@ var NetworkingPacket = (function () {
     }
     return NetworkingPacket;
 }());
-var NetworkingConfig = (function () {
-    function NetworkingConfig(hostname, port) {
-        this.hostname = hostname;
-        this.port = port;
-    }
-    return NetworkingConfig;
-}());
 var NetworkManager = (function () {
-    function NetworkManager(window, callback) {
-        this.networkingId = 0;
+    function NetworkManager(window, ready) {
+        var _this = this;
         this.networkConnected = false;
-        var net = require("net");
-        this.networkClient = new net.Socket();
+        this.readyCallbackUsed = false;
+        this.networkingId = 0;
+        this.connectionId = 0;
+        this.activeConnectionId = 0;
+        this.hostname = "";
+        this.port = 0;
         this.window = window;
-        this.networkConfig = new NetworkingConfig("", 0);
         this.queuedRequests = [];
         this.networkingId = 0;
-        this.callback = callback;
-        this.initialize();
-    }
-    NetworkManager.prototype.initialize = function () {
-        var _this = this;
-        this.networkClient.on(RequestTypes_1.NetworkingStatus.Data, function (response) {
-            if (response == undefined)
+        this.readyCallback = function () {
+            if (!_this.readyCallbackUsed) {
+                _this.readyCallbackUsed = true;
+                ready();
+            }
+        };
+        this.dataCallback = function (id, response) {
+            if (response == undefined || id < _this.activeConnectionId)
                 return;
+            _this.checkConnectionId(id);
             console.log("Networking | Received: " + response);
             var returnedPacket;
             try {
@@ -64,27 +62,34 @@ var NetworkManager = (function () {
             }
             if (!foundId)
                 console.log("Networking | Received packet with no matching id - Ignoring");
-        });
-        this.networkClient.once(RequestTypes_1.NetworkingStatus.Ready, function () {
-            _this.callback();
-        });
-        this.networkClient.on(RequestTypes_1.NetworkingStatus.Close, function () {
+        };
+        this.closeCallback = function (id) {
+            if (id < _this.activeConnectionId)
+                return;
+            _this.checkConnectionId(id);
             console.log("Networking | Connection closed");
-            _this.disconnect();
             _this.window.webContents.send(RequestTypes_1.NetworkingStatus.SetStatus, "disconnected");
-        });
-        this.networkClient.on(RequestTypes_1.NetworkingStatus.Error, function (error) {
-            console.log("Networking | " + error);
+        };
+        this.errorCallback = function (id, str) {
+            if (id < _this.activeConnectionId)
+                return;
+            _this.checkConnectionId(id);
+            console.log("Networking | " + str);
             _this.disconnect();
             _this.queuedRequests.forEach(function (value) {
                 value.event.returnValue = null;
             });
             _this.queuedRequests = [];
             _this.window.webContents.send(RequestTypes_1.NetworkingStatus.SetStatus, "disconnected");
-        });
+        };
+        this.connection = new Connection(this.connectionId++, this.readyCallback, this.dataCallback, this.closeCallback, this.errorCallback);
+    }
+    NetworkManager.prototype.checkConnectionId = function (id) {
+        if (id > this.activeConnectionId)
+            this.activeConnectionId = id;
     };
     NetworkManager.prototype.send = function (event, requestType, identifiers, data) {
-        if (!this.networkConnected) {
+        if (!this.networkConnected || this.connection == undefined) {
             event.returnValue = undefined;
             return;
         }
@@ -93,63 +98,80 @@ var NetworkManager = (function () {
         if (data != undefined) {
             dataJson.push(JSON.stringify(data));
         }
-        var packet = new NetworkingPacket(requestType, dataJson, identifiers, Date.now(), id);
         this.queuedRequests.push({ id: id, event: event });
-        var str = JSON.stringify(packet);
-        this.sendString(str);
-    };
-    NetworkManager.prototype.sendString = function (str) {
-        this.networkClient.write(str + "\r\n", function () {
+        var str = JSON.stringify(new NetworkingPacket(requestType, dataJson, identifiers, Date.now(), id));
+        this.connection.sendString(str, function () {
             console.log("Networking | Sent: " + str);
         });
     };
     NetworkManager.prototype.modifyConfig = function (hostname, port) {
-        this.networkConfig.hostname = hostname;
-        this.networkConfig.port = port;
+        this.hostname = hostname;
+        this.port = port;
         this.reconnect();
     };
     NetworkManager.prototype.connect = function () {
         var _this = this;
-        if (this.networkConnected)
+        if (this.networkConnected || this.connection == undefined)
             return;
         console.log("Networking | Connecting");
         this.window.webContents.send(RequestTypes_1.NetworkingStatus.SetStatus, "connecting");
-        this.networkClient.connect(this.networkConfig.port, this.networkConfig.hostname, function () {
+        this.connection.connect(this.hostname, this.port, function () {
             console.log("Networking | Connection established");
+            _this.checkConnectionId(_this.connection.id);
             _this.networkConnected = true;
             _this.window.webContents.send(RequestTypes_1.NetworkingStatus.SetStatus, "connected");
             _this.window.webContents.send(RequestTypes_1.NetworkOperation.SetDisplayAddress, {
-                hostname: _this.networkConfig.hostname,
-                port: String(_this.networkConfig.port)
+                hostname: _this.hostname,
+                port: String(_this.port)
             });
         });
     };
     NetworkManager.prototype.disconnect = function () {
-        if (!this.networkConnected)
+        if (!this.networkConnected || this.connection == undefined)
             return;
         console.log("Networking | Disconnecting");
         this.networkConnected = false;
-        this.networkClient.end();
+        this.connection.disconnect();
     };
     NetworkManager.prototype.reconnect = function () {
-        var _this = this;
-        if (this.networkConnected) {
+        if (this.networkConnected && this.connection != undefined) {
             this.disconnect();
-            this.networkClient.once(RequestTypes_1.NetworkingStatus.Close, function () {
-                _this.connectWithEvent();
-            });
+            this.reconnectConnection();
         }
         else {
-            this.connectWithEvent();
+            this.reconnectConnection();
         }
     };
-    NetworkManager.prototype.connectWithEvent = function () {
+    NetworkManager.prototype.reconnectConnection = function () {
         var _this = this;
-        this.connect();
-        this.networkClient.once(RequestTypes_1.NetworkingStatus.Ready, function () {
+        this.connection = new Connection(this.connectionId++, function () {
+            _this.readyCallback();
             _this.window.webContents.send(RequestTypes_1.NetworkOperation.Reconnect);
-        });
+        }, this.dataCallback, this.closeCallback, this.errorCallback);
+        this.connect();
     };
     return NetworkManager;
 }());
 exports.NetworkManager = NetworkManager;
+var Connection = (function () {
+    function Connection(id, ready, data, close, error) {
+        var _this = this;
+        var net = require("net");
+        this.networkClient = new net.Socket();
+        this.id = id;
+        this.networkClient.on(RequestTypes_1.NetworkingStatus.Ready, function () { ready(_this.id); });
+        this.networkClient.on(RequestTypes_1.NetworkingStatus.Data, function (response) { data(_this.id, response); });
+        this.networkClient.on(RequestTypes_1.NetworkingStatus.Close, function () { close(_this.id); });
+        this.networkClient.on(RequestTypes_1.NetworkingStatus.Error, function (str) { error(_this.id, str); });
+    }
+    Connection.prototype.sendString = function (str, callback) {
+        this.networkClient.write(str + "\r\n", callback);
+    };
+    Connection.prototype.connect = function (hostname, port, callback) {
+        this.networkClient.connect(port, hostname, callback);
+    };
+    Connection.prototype.disconnect = function () {
+        this.networkClient.end();
+    };
+    return Connection;
+}());

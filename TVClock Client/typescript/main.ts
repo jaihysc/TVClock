@@ -27,8 +27,8 @@ async function createWindow() {
         await mainWindow.loadFile("index.html");
         mainWindow.webContents.send(NetworkingStatus.SetStatus, "connected");
         mainWindow.webContents.send(NetworkOperation.SetDisplayAddress,{
-            hostname: networkManager.networkConfig.hostname,
-            port: String(networkManager.networkConfig.port)}
+            hostname: networkManager.hostname,
+            port: String(networkManager.port)}
         );
     });
 

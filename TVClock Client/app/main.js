@@ -68,8 +68,8 @@ function createWindow() {
                                     _a.sent();
                                     mainWindow.webContents.send(RequestTypes_1.NetworkingStatus.SetStatus, "connected");
                                     mainWindow.webContents.send(RequestTypes_1.NetworkOperation.SetDisplayAddress, {
-                                        hostname: networkManager.networkConfig.hostname,
-                                        port: String(networkManager.networkConfig.port)
+                                        hostname: networkManager.hostname,
+                                        port: String(networkManager.port)
                                     });
                                     return [2];
                             }
