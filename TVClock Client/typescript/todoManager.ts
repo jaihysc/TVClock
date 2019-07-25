@@ -24,16 +24,16 @@ export class TodoViewManager implements IViewController {
     selectedTaskIndex = -1; //Index of current selected active task
     inEditMode = false; //Keep track of whether the edit button is in use or not
 
-    taskList = $(`#active-tasks-list`);
+    taskList!: JQuery<HTMLElement>;
 
-    addButton = $(`#add-task-btn`);
-    editButton = $(`#edit-task-btn`);
-    removeButton = $(`#remove-task-btn`);
+    addButton!: JQuery<HTMLElement>;
+    editButton!: JQuery<HTMLElement>;
+    removeButton!: JQuery<HTMLElement>;
 
-    newTaskText = $(`#new-task-text`);
-    newTaskStartDate = $(`#new-task-start-date`);
-    newTaskEndDate = $(`#new-task-end-date`);
-    taskErrorText = $(`#new-task-text-error`);
+    newTaskText!: JQuery<HTMLElement>;
+    newTaskStartDate!: JQuery<HTMLElement>;
+    newTaskEndDate!: JQuery<HTMLElement>;
+    taskErrorText!: JQuery<HTMLElement>;
 
 
     tasksIdentifier = "todo-view-tasks"; //Identifier for tasks in persistence storage

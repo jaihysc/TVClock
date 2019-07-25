@@ -6,14 +6,16 @@ import {NetworkOperation} from "./RequestTypes";
 import {IViewController} from "./viewManager";
 
 export class SettingViewManager implements IViewController {
-    networkingHostname = $(`#networking-hostname`);
-    networkingPort = $(`#networking-port`);
-    networkingUpdateBtn = $(`#networking-info-update-btn`);
+    networkingHostname!: JQuery<HTMLElement>;
+    networkingPort!: JQuery<HTMLElement>;
+    networkingUpdateBtn!: JQuery<HTMLElement>;
+    apiUpdateBtn!: JQuery<HTMLElement>;
 
     initialize(): void {
         this.networkingHostname = $("#networking-hostname");
         this.networkingPort = $("#networking-port");
         this.networkingUpdateBtn = $("#networking-info-update-btn");
+        this.apiUpdateBtn = $("#api-services-update-btn");
     }
 
     preload(): void {

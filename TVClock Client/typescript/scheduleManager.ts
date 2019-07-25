@@ -30,8 +30,8 @@ export class ScheduleViewManager implements IViewController {
     scheduleItemsIdentifier = "schedule-view-scheduleItems";
     periodItemsIdentifier = "schedule-view-periodItems";
 
-    scheduleItemContainer = $(`#view-schedule-scheduleItem-container`);
-    periodItemContainer = $(`#view-schedule-periodItem-container`);
+    scheduleItemContainer!: JQuery<HTMLElement>;
+    periodItemContainer!: JQuery<HTMLElement>;
 
     selectedScheduleItemIndex = -1;
     selectedPeriodItemIndex = -1; //-1 indicates nothing is selected
@@ -39,15 +39,15 @@ export class ScheduleViewManager implements IViewController {
 
     editingPeriod = false;
 
-    periodConfigurationMenu = $(`#period-configuration-menu`);
+    periodConfigurationMenu!: JQuery<HTMLElement>;
 
-    addButton = $(`#schedule-period-add`);
-    editButton = $(`#schedule-period-edit`);
-    removeButton = $(`#schedule-period-remove`);
-    errorText = $(`#new-period-text-error`);
+    addButton!: JQuery<HTMLElement>;
+    editButton!: JQuery<HTMLElement>;
+    removeButton!: JQuery<HTMLElement>;
+    errorText!: JQuery<HTMLElement>;
 
-    inputText = $(`#new-period-text`);
-    inputColor = $(`#new-period-color`);
+    inputText!: JQuery<HTMLElement>;
+    inputColor!: JQuery<HTMLElement>;
 
     initialize(): void {
         this.scheduleItemContainer = $("#view-schedule-scheduleItem-container");
