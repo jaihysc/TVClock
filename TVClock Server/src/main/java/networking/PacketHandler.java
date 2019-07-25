@@ -25,8 +25,6 @@ public class PacketHandler implements IMessageReceived {
      */
     @Override
     public void handleMessage(Packet receivedPacket, Connection connection) {
-        Gson gson = new Gson();
-
         switch (receivedPacket.requestType) {
             case Post: //POST request from client
                 for (int i = 0; i < receivedPacket.data.length; ++i) {
@@ -34,9 +32,7 @@ public class PacketHandler implements IMessageReceived {
                 }
 
                 //send UPDATE out to all clients
-                Packet updatePacket = new Packet(RequestType.Update, receivedPacket.data, receivedPacket.dataIdentifiers);
-                ConnectionManager.sendMessage(gson.toJson(updatePacket, Packet.class));
-
+                sendUpdateRequest(receivedPacket.data, receivedPacket.dataIdentifiers);
                 break;
 
             case Get: //GET request from client
@@ -47,9 +43,21 @@ public class PacketHandler implements IMessageReceived {
                 Packet returnPacket = new Packet(
                         RequestType.Response, returnData.toArray(new String[0]), receivedPacket.dataIdentifiers, receivedPacket.id);
 
+                Gson gson = new Gson();
                 connection.sendMessage(gson.toJson(returnPacket, Packet.class));
                 break;
         }
+    }
+
+    public static void sendItemUpdateRequest(String identifier) {
+        sendUpdateRequest(new String[]{retrieveDataJson(identifier)}, new String[]{identifier});
+    }
+
+    private static void sendUpdateRequest(String[] data, String[] dataIdentifiers) {
+        Gson gson = new Gson();
+
+        Packet updatePacket = new Packet(RequestType.Update, data, dataIdentifiers);
+        ConnectionManager.sendMessage(gson.toJson(updatePacket, Packet.class));
     }
 
     /**
@@ -86,12 +94,10 @@ public class PacketHandler implements IMessageReceived {
                 ApplicationData.taskItems = gson.fromJson(json, TaskItem[].class);
 
                 //Add taskItem name to a list to show up on screen
-                List<String> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
-                taskListSync.clear();
+                List<TaskItem> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
                 synchronized (taskListSync) {
-                    for (var taskItem : ApplicationData.taskItems) {
-                        taskListSync.add(taskItem.text);
-                    }
+                    taskListSync.clear();
+                    Collections.addAll(taskListSync, ApplicationData.taskItems);
                 }
 
                 break;

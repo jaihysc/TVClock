@@ -14,6 +14,7 @@ import javafx.scene.paint.Color;
 import javafx.util.Duration;
 import networking.SettingMenu;
 import storage.ApplicationData;
+import taskList.TaskItem;
 import taskList.TaskListManager;
 import weather.OpenWeatherMapFacade;
 import weather.models.*;
@@ -120,16 +121,19 @@ public class Controller implements Initializable {
         taskList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         Timeline t = new Timeline(new KeyFrame(Duration.ZERO, e -> {
-            //TOdo, add timed auto remove of tasks
-            taskList.getItems().clear(); //Clear the taskList before adding new items
+            //Trim off old taskItems
+            TaskListManager.trimOldTasks();
 
-            List<String> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
+            taskList.getItems().clear(); //Clear the taskList before adding new items
+            List<TaskItem> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
 
             int wrapCharacter = (int) Math.round(taskListSplitPane.getDividerPositions()[0] * 100);
             //Synchronise since this runs in a thread
             synchronized (taskListSync) {
                 for (var item : taskListSync) {
-                    taskList.getItems().add(TaskListManager.wrapText(item, wrapCharacter));
+                    //Add task if start date is greater than current date and end date is less than current date
+                    if (TaskListManager.isDateCurrent(item.startDate, item.endDate))
+                        taskList.getItems().add(TaskListManager.wrapText(item.text, wrapCharacter));
                 }
             }
         }), new KeyFrame(Duration.seconds(10)));

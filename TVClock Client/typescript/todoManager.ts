@@ -78,17 +78,13 @@ export class TodoViewManager implements IViewController {
             }
             this.taskErrorText.hide();
 
-            //If date boxes are empty, use placeholder date
+            this.updatePlaceholderDates();
             let startDate = String(this.newTaskStartDate.val());
-            if (startDate == "")
-                startDate = String(this.newTaskStartDate.attr("placeholder"));
-
             let endDate = String(this.newTaskEndDate.val());
-            if (endDate == "")
-                endDate = String(this.newTaskEndDate.attr("placeholder"));
 
-            //Creates a new task object with the user provided info
-            let newTask = new Task(taskText, new Date(startDate), new Date(endDate));
+            let newTask = this.validateStartEndDate(taskText, {start: startDate, end: endDate});
+            if (newTask == undefined)
+                return;
 
             //Instead of adding a new task, overwrite if the user is in edit mode
             if (this.inEditMode) {
@@ -132,12 +128,7 @@ export class TodoViewManager implements IViewController {
             this.hideModifierButtons();
             this.taskErrorText.hide();
 
-            //Set placeholder start date to current time, and end date to 2 days in the future
-            let currentDate = new Date();
-            this.newTaskStartDate.attr("placeholder", TodoViewManager.toFullDateString(currentDate));
-
-            currentDate.setDate(currentDate.getDate()+2); //add 2 days for the future end date
-            this.newTaskEndDate.attr("placeholder", currentDate.toDateString());
+            this.updatePlaceholderDates();
 
             //Fetch from the server or use local data depending on whether it has already fetched from the server or not
             if (ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.serverFetchIdentifier) == undefined) {
@@ -257,5 +248,33 @@ export class TodoViewManager implements IViewController {
         this.newTaskText.val(this.taskListTasks[this.selectedTaskIndex].text);
         this.newTaskStartDate.val(TodoViewManager.toFullDateString(this.taskListTasks[this.selectedTaskIndex].startDate));
         this.newTaskEndDate.val(TodoViewManager.toFullDateString(this.taskListTasks[this.selectedTaskIndex].endDate));
+    }
+
+    private updatePlaceholderDates() {
+        //Set placeholder start date to current time, and end date to 2 days in the future
+        let currentDate = new Date();
+        this.newTaskStartDate.attr("placeholder", TodoViewManager.toFullDateString(currentDate));
+
+        currentDate.setDate(currentDate.getDate()+2); //add 2 days for the future end date
+        this.newTaskEndDate.attr("placeholder", TodoViewManager.toFullDateString(currentDate));
+    }
+
+    private validateStartEndDate(taskText: string, dates: {start: String; end: String}) {
+        if (dates.start == "")
+            dates.start = String(this.newTaskStartDate.attr("placeholder"));
+        if (dates.end == "")
+            dates.end = String(this.newTaskEndDate.attr("placeholder"));
+
+        let startDate = new Date(String(dates.start));
+        let endDate = new Date(String(dates.end));
+
+        let currentDate = new Date();
+        currentDate.setDate(currentDate.getDate()-1); //Allow a margin 1 day back
+
+        //Make sure startDay is current and endDate is after startDate
+        if (startDate >= currentDate && startDate < endDate) {
+            //Creates a new task object with the user provided info
+            return new Task(taskText, new Date(startDate), new Date(endDate));
+        }
     }
 }

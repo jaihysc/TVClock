@@ -8,7 +8,7 @@ import taskList.TaskItem;
  * Examples: Tasks, Schedule items
  */
 public class ApplicationData {
-    public static TaskItem[] taskItems;
+    public static TaskItem[] taskItems; //Cannot initialize these values as the client expects them to be undefined
     public static ScheduleItemGeneric[] scheduleItems;
     public static ScheduleItemGeneric[] periodItems;
 

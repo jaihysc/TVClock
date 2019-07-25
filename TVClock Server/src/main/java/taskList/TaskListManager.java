@@ -1,6 +1,15 @@
 package taskList;
 
+import networking.ConnectionManager;
+import networking.PacketHandler;
+import networking.models.Packet;
+import networking.models.RequestType;
+import storage.ApplicationData;
+import storage.ApplicationDataIdentifiers;
+
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -8,7 +17,7 @@ import java.util.List;
  */
 public class TaskListManager {
 
-    public static List<String> taskListItems = new ArrayList<>();
+    public static List<TaskItem> taskListItems = new ArrayList<>();
 
     /**
      * Wraps long text by inserting line breaks
@@ -58,5 +67,49 @@ public class TaskListManager {
         returnText.append(text.substring(substringBeginIndex));
 
         return returnText.toString();
+    }
+
+    /**
+     * Trims expired tasks from taskItems
+     */
+    public static void trimOldTasks() {
+        TaskItem[] taskItems = ApplicationData.taskItems;
+        if (taskItems == null)
+            return;
+        boolean tasksTrimmed = false; //Avoids unnecessary networking Update requests when nothing was trimmed
+
+        //Filter out taskItems whose endDate is passed
+        List<TaskItem> taskItemsNew = new ArrayList<>();
+        for (var taskItem : taskItems) {
+            if (taskItem.endDate.after(new Date())) {
+                taskItemsNew.add(taskItem);
+            } else {
+                tasksTrimmed = true;
+            }
+        }
+
+        ApplicationData.taskItems = taskItemsNew.toArray(new TaskItem[0]);
+
+        //Add trimmed task items to taskListItems
+        List<TaskItem> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
+        synchronized (taskListSync) {
+            taskListSync.clear();
+            Collections.addAll(taskListSync, ApplicationData.taskItems);
+        }
+
+        if (tasksTrimmed) {
+            PacketHandler.sendItemUpdateRequest(ApplicationDataIdentifiers.taskItems);
+        }
+    }
+
+    /**
+     * Checks  start and end dates are in range of the current date (Start - End)
+     * @param startDate start date
+     * @param endDate end date
+     * @return whether or not the 2 dates are current
+     */
+    public static boolean isDateCurrent(Date startDate, Date endDate) {
+        Date currentDate = new Date();
+        return startDate.before(currentDate) && endDate.after(currentDate);
     }
 }
