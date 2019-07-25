@@ -28,7 +28,7 @@ export class SettingViewManager implements IViewController {
             if (hostname == "localhost")
                 hostname = "127.0.0.1";
 
-            ipcRenderer.send("networking-display-address",
+            ipcRenderer.send(NetworkOperation.SetDisplayAddress,
                 {hostname: hostname, port: Number(this.networkingPort.val())}
             );
         });

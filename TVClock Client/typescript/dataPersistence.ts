@@ -1,6 +1,7 @@
 //Main
 
 import { ipcMain } from "electron";
+import {LocalStorageOperation} from "./RequestTypes";
 
 //Allows other js files to store common data under a identifier so it is not lost on page reload
 //Accessed via events
@@ -23,12 +24,12 @@ class dataNode {
 //Binary search for adding and retrieving data
 let headNode: dataNode = new dataNode();
 
-ipcMain.on("data-save", (event: any, arg: { identifier: string; data: any; }) => {
+ipcMain.on(LocalStorageOperation.Save, (event: any, arg: { identifier: string; data: any; }) => {
     dataAdd(arg.identifier, arg.data);
     event.returnValue = undefined;
 });
 
-ipcMain.on("data-retrieve", (event: any, identifier: string) => {
+ipcMain.on(LocalStorageOperation.Fetch, (event: any, identifier: string) => {
     let foundNode = binaryNodeSearch(headNode, identifier);
 
     //Send back an undefined response if it failed to find a node

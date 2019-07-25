@@ -4,49 +4,48 @@
 import { ipcRenderer } from "electron";
 import {RequestType, NetworkOperation, LocalStorageOperation} from "./RequestTypes";
 import {IViewController} from "./viewManager";
+import {StringTags, ViewCommon} from "./ViewCommon";
 
-//An active task in the task list
+//A task in the task list
 class Task {
+    text = "";
+    startDate = new Date();
+    endDate = new Date();
+
     constructor(text: string, startDate: Date, endDate: Date) {
         this.text = text;
         this.startDate = startDate;
         this.endDate = endDate;
     }
-
-    text = "";
-    startDate = new Date();
-    endDate = new Date();
 }
 
 export class TodoViewManager implements IViewController {
-    taskList = $(`#active-tasks-list`);
-    tasks: Task[] = []; //Collection of tasks
+    taskListTasks: Task[] = []; //Collection of tasks
     selectedTaskIndex = -1; //Index of current selected active task
+    inEditMode = false; //Keep track of whether the edit button is in use or not
 
-    addTaskBtn = $(`#add-task-btn`);
-    editTaskBtn = $(`#edit-task-btn`);
-    removeTaskBtn = $(`#remove-task-btn`);
+    taskList = $(`#active-tasks-list`);
 
-    //Adding a task to active tasks with task manager
+    addButton = $(`#add-task-btn`);
+    editButton = $(`#edit-task-btn`);
+    removeButton = $(`#remove-task-btn`);
+
     newTaskText = $(`#new-task-text`);
     newTaskStartDate = $(`#new-task-start-date`);
     newTaskEndDate = $(`#new-task-end-date`);
     taskErrorText = $(`#new-task-text-error`);
 
-    editUpdatingTask = false; //Keep track of whether the edit button is in use or not
 
     tasksIdentifier = "todo-view-tasks"; //Identifier for tasks in persistence storage
-    fetchedFromServerIdentifier = "todo-view-fetchedFromServer";
+    serverFetchIdentifier = "todo-view-fetchedFromServer";
 
     initialize(): void {
         this.taskList = $("#active-tasks-list");
-        this.selectedTaskIndex = -1; //Index of current selected active task
 
-        this.addTaskBtn = $("#add-task-btn");
-        this.editTaskBtn = $("#edit-task-btn");
-        this.removeTaskBtn = $("#remove-task-btn");
+        this.addButton = $("#add-task-btn");
+        this.editButton = $("#edit-task-btn");
+        this.removeButton = $("#remove-task-btn");
 
-        //Adding a task to active tasks with task manager
         this.newTaskText = $("#new-task-text");
         this.newTaskStartDate = $("#new-task-start-date");
         this.newTaskEndDate = $("#new-task-end-date");
@@ -54,16 +53,23 @@ export class TodoViewManager implements IViewController {
     }
 
     preload(): void {
-        //Update request handler
-        ipcRenderer.on(this.tasksIdentifier + "-update", (event: any, data: string) => {
+        //When the user hits the refresh button
+        ipcRenderer.on(NetworkOperation.Reconnect, () => {
+            //Refetch from server by setting the serverFetchIdentifier to undefined
+            ipcRenderer.sendSync(LocalStorageOperation.Save, {identifier: this.serverFetchIdentifier, data: undefined});
+
+            //Refresh the view
+            $( ".nav-item a" )[0].click();
+        });
+
+        //Networking Update request handler
+        ipcRenderer.on(this.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, data: string) => {
             this.updateTasks(JSON.parse(data), false);
         });
 
-        //Add button click, gather information from text fields and add to task list array
-        this.addTaskBtn.on("click", () => {
+        //Adds a new task to the task list
+        this.addButton.on("click", () => {
             let taskText = String(this.newTaskText.val());
-            let startDate = String(this.newTaskStartDate.val());
-            let endDate = String(this.newTaskEndDate.val());
 
             //Show error text if task does not have a name
             if (taskText == "") {
@@ -73,21 +79,23 @@ export class TodoViewManager implements IViewController {
             this.taskErrorText.hide();
 
             //If date boxes are empty, use placeholder date
-            if (startDate == "") {
+            let startDate = String(this.newTaskStartDate.val());
+            if (startDate == "")
                 startDate = String(this.newTaskStartDate.attr("placeholder"));
-            }
-            if (endDate == "") {
-                endDate = String(this.newTaskEndDate.attr("placeholder"));
-            }
 
+            let endDate = String(this.newTaskEndDate.val());
+            if (endDate == "")
+                endDate = String(this.newTaskEndDate.attr("placeholder"));
+
+            //Creates a new task object with the user provided info
             let newTask = new Task(taskText, new Date(startDate), new Date(endDate));
 
-            //Perform separate function if currently editing task
-            if (this.editUpdatingTask) {
-                this.tasks[this.selectedTaskIndex] = newTask; //Overwrite when editing
-                this.editTaskBtn.trigger("click"); //Exit edit mode by clicking the edit button
+            //Instead of adding a new task, overwrite if the user is in edit mode
+            if (this.inEditMode) {
+                this.taskListTasks[this.selectedTaskIndex] = newTask; //Overwrite when editing
+                this.editButton.trigger("click"); //Exit edit mode by clicking the edit button
             } else {
-                this.tasks.push(newTask); //Create new task
+                this.taskListTasks.push(newTask);
             }
             this.wipeInputFields();
             //Refresh task list to include changes
@@ -95,47 +103,22 @@ export class TodoViewManager implements IViewController {
         });
 
         //Edit and remove button functionality
-        this.editTaskBtn.on("click", () => {
-            //Exit updating task if edit button is pressed again
-            if (this.editUpdatingTask) {
-                this.editUpdatingTask = false;
-                this.addTaskBtn.html("Add task");
-                this.editTaskBtn.html("Edit task");
-                this.removeTaskBtn.show();
-
-                this.wipeInputFields();
-            } else {
-                //Rename add task button to update task
-                this.editUpdatingTask = true;
-                this.addTaskBtn.html("Update task");
-                this.editTaskBtn.html("Cancel");
-                this.removeTaskBtn.hide();
-
-                //Load data from the selected task item into fields
-                this.newTaskText.val(this.tasks[this.selectedTaskIndex].text);
-                this.newTaskStartDate.val(TodoViewManager.toFullDateString(this.tasks[this.selectedTaskIndex].startDate));
-                this.newTaskEndDate.val(TodoViewManager.toFullDateString(this.tasks[this.selectedTaskIndex].endDate));
-            }
+        this.editButton.on("click", () => {
+            if (this.inEditMode)
+                this.exitEditMode();
+            else
+                this.enterEditMode();
         });
 
-        this.removeTaskBtn.on("click", () => {
-            //Remove task by overwriting it with the tasks after it (n+1)
-            for (let i = this.selectedTaskIndex; i < this.tasks.length; ++i) {
-                //If at end of array, pop last one away since there is none after it
-                if (i + 1 >= this.tasks.length) {
-                    this.tasks.pop();
-                    break;
-                }
-
-                this.tasks[i] = this.tasks[i+1];
-            }
+        this.removeButton.on("click", () => {
+            ViewCommon.removeArrayItemAtIndex(this.taskListTasks, this.selectedTaskIndex);
 
             //If there are no more tasks in the list, do not select anything
-            if (this.tasks.length == 0) {
+            if (this.taskListTasks.length == 0) {
                 this.selectedTaskIndex = -1;
-                this.editTaskBtn.hide();
-                this.removeTaskBtn.hide();
-            } else if (this.selectedTaskIndex >= this.tasks.length) { //If user selected last task
+                this.hideModifierButtons();
+            } else if (this.selectedTaskIndex >= this.taskListTasks.length) {
+                //Select the second last task if deleting the last task in the array
                 this.selectedTaskIndex -= 1;
             }
 
@@ -144,136 +127,135 @@ export class TodoViewManager implements IViewController {
     }
 
     load(): void {
-        //Networking retrieve stored tasks
-        //Wait until the document is ready before running so the user has something to look at
         $(() => {
-            //Hide edit and remove buttons by default
-            this.editTaskBtn.hide();
-            this.removeTaskBtn.hide();
-
-            this.taskErrorText.hide(); //Hide error text by default
+            //Hide edit and remove buttons + error text by default
+            this.hideModifierButtons();
+            this.taskErrorText.hide();
 
             //Set placeholder start date to current time, and end date to 2 days in the future
             let currentDate = new Date();
-            currentDate.setDate(currentDate.getDate()+2); //add 2 days for the future end date
-
             this.newTaskStartDate.attr("placeholder", TodoViewManager.toFullDateString(currentDate));
+
+            currentDate.setDate(currentDate.getDate()+2); //add 2 days for the future end date
             this.newTaskEndDate.attr("placeholder", currentDate.toDateString());
 
-            let fetchedFromServer: boolean = ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.fetchedFromServerIdentifier);
-
-            ipcRenderer.on(NetworkOperation.Reconnect, () => {
-                //Clear all stored data
-                ipcRenderer.sendSync(LocalStorageOperation.Save, {identifier: this.fetchedFromServerIdentifier, data: undefined});
-
-                //Refresh the view
-                $( ".nav-item a" )[0].click();
-            });
-
-            let data: Task[] = [];
-            if (fetchedFromServer == undefined || !fetchedFromServer) {
+            //Fetch from the server or use local data depending on whether it has already fetched from the server or not
+            if (ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.serverFetchIdentifier) == undefined) {
                 //Send fetch request to server
                 let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [this.tasksIdentifier]});
-                data = JSON.parse(jsonData.data[0]);
+                this.updateTasks(JSON.parse(jsonData.data[0]), false);
 
                 //Save that a fetch has already been performed to the server
-                ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.fetchedFromServerIdentifier, data: true});
-
-                this.updateTasks(data, false);
+                ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.serverFetchIdentifier, data: true});
             } else {
                 //Retrieve back stored data from localstorage
-                data = ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.tasksIdentifier);
-                this.updateTasks(data, false);
+                this.updateTasks(ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.tasksIdentifier), false);
             }
         });
     }
 
-    updateTasks(data: any[], sendServerPost: boolean) {
-        this.tasks = []; //Clear tasks first
+    private updateTasks(data: any[], sendServerPost: boolean) {
+        this.taskListTasks = []; //Clear tasks first
         if (data != undefined) {
             for (let i = 0; i < data.length; ++i) {
                 //Reconvert date text into date
-                this.tasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
+                this.taskListTasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
             }
         }
-
-        //Updates the appearance of the task list with the data from tasks
+        //Updates the appearance of the task list with the new data
         this.updateTaskList(sendServerPost);
     }
 
-    wipeInputFields() {
+    private wipeInputFields() {
         this.newTaskText.val("");
         this.newTaskStartDate.val("");
         this.newTaskEndDate.val("");
     }
 
-    static toFullDateString(date: Date) {
+    private static toFullDateString(date: Date) {
         return `${date.toDateString()} ${date.getHours()}:${date.getMinutes()}`;
     }
 
     //Injects html into the list for elements to appear on screen, saves task data to persistent
-    updateTaskList(sendServerPost: boolean) {
-        this.taskList.html(""); //Clear old contents first
+    private updateTaskList(sendServerPost: boolean) {
+        this.taskList.html(""); //Clear old contents
 
-        for (let i = 0; i < this.tasks.length; ++i) {
-            //Inject each task into the html after sanitizing it
+        //Inject each task into the html after sanitizing it
+        for (let i = 0; i < this.taskListTasks.length; ++i) {
             let pTag = $("<p class='list-item-description'/>")
-                .text(this.tasks[i].startDate + " - " + this.tasks[i].endDate);
+                .text(this.taskListTasks[i].startDate + " - " + this.taskListTasks[i].endDate);
+
             $("<li class='list-group-item-darker list-group-flush task-list-item'>")
-                .text(this.tasks[i].text)
+                .text(this.taskListTasks[i].text)
                 .append(pTag)
                 .appendTo(this.taskList);
         }
 
         //Create event handlers for each task so it can be set active
-        let taskListItems = $(".task-list-item");
-        for (let i = 0; i < taskListItems.length; ++i) {
-            taskListItems[i].addEventListener("click", () => {
-                //Cancel editing
-                if (this.editUpdatingTask) {
-                    this.editUpdatingTask = false;
-                    this.addTaskBtn.html("Add period");
-                    this.editTaskBtn.html("Edit period");
-                    this.removeTaskBtn.show();
+        let taskListTasksHtml = $(".task-list-item");
+        for (let i = 0; i < taskListTasksHtml.length; ++i) {
+            taskListTasksHtml[i].addEventListener("click", () => {
+                this.exitEditMode();
+                //Deselect last clicked task
+                if (this.selectedTaskIndex >= 0)
+                    ViewCommon.deselectListItem(taskListTasksHtml, this.selectedTaskIndex);
 
-                    this.wipeInputFields()
-                }
-
-                //Set clicked button as active
-                //The class list-group-item is added as active only shows up with list-group-item
-                //Removing the custom class list-group-item-darker
-                if (this.selectedTaskIndex >= 0) {
-                    taskListItems[this.selectedTaskIndex].classList.remove("active", "list-group-item");
-                    taskListItems[this.selectedTaskIndex].classList.add("list-group-item-darker");
-                }
-
-                //If clicking the same item, unselect it
+                //If clicking the same item, hide edit buttons, selectedTaskIndex is -1 as nothing is selected
                 if (this.selectedTaskIndex == i) {
                     this.selectedTaskIndex = -1;
-
-                    this.editTaskBtn.hide();
-                    this.removeTaskBtn.hide();
+                    this.hideModifierButtons();
                 } else {
+                    //Not clicking same item, select the item and show buttons
                     this.selectedTaskIndex = i;
-                    taskListItems[i].classList.add("active", "list-group-item");
-                    taskListItems[i].classList.remove("list-group-item-darker");
-
-                    this.editTaskBtn.show();
-                    this.removeTaskBtn.show();
+                    ViewCommon.selectListItem(taskListTasksHtml, i);
+                    this.showModifierButtons();
                 }
             })
         }
+        //Preselect selectedTaskIndex
+        if (this.selectedTaskIndex >= 0)
+            ViewCommon.selectListItem(taskListTasksHtml, this.selectedTaskIndex);
 
-        //Preselect an item based on the selectedTaskIndex
-        if (this.selectedTaskIndex >= 0) {
-            taskListItems[this.selectedTaskIndex].classList.add("active", "list-group-item");
-            taskListItems[this.selectedTaskIndex].classList.remove("list-group-item-darker");
-        }
-
-        //Save task data to persistent
-        ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.tasksIdentifier, data: this.tasks});
+        //Save task data to local storage
+        ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.tasksIdentifier, data: this.taskListTasks});
         //Send POST to server
         if (sendServerPost)
-            ipcRenderer.send(NetworkOperation.Send, {requestType: RequestType.Post, identifiers: [this.tasksIdentifier], data: this.tasks});
+            ipcRenderer.send(NetworkOperation.Send, {requestType: RequestType.Post, identifiers: [this.tasksIdentifier], data: this.taskListTasks});
+    }
+
+    //Shows/Hides the edit + remove buttons
+    private showModifierButtons() {
+        this.editButton.show();
+        this.removeButton.show();
+    }
+    private hideModifierButtons() {
+        this.editButton.hide();
+        this.removeButton.hide();
+    }
+
+    //Toggles the edit modes
+    private exitEditMode() {
+        if (!this.inEditMode)
+            return;
+        this.inEditMode = false;
+        this.addButton.html("Add task");
+        this.editButton.html("Edit task");
+        this.removeButton.show();
+
+        this.wipeInputFields();
+    }
+    private enterEditMode() {
+        if (this.inEditMode)
+            return;
+        //Rename add task button to update task
+        this.inEditMode = true;
+        this.addButton.html("Update task");
+        this.editButton.html("Cancel");
+        this.removeButton.hide();
+
+        //Load data from the selected task item into fields
+        this.newTaskText.val(this.taskListTasks[this.selectedTaskIndex].text);
+        this.newTaskStartDate.val(TodoViewManager.toFullDateString(this.taskListTasks[this.selectedTaskIndex].startDate));
+        this.newTaskEndDate.val(TodoViewManager.toFullDateString(this.taskListTasks[this.selectedTaskIndex].endDate));
     }
 }

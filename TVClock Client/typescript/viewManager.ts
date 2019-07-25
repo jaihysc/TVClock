@@ -4,11 +4,12 @@
 import {TodoViewManager} from "./todoManager";
 import {ScheduleViewManager} from "./scheduleManager";
 import {SettingViewManager} from "./settingManager";
+import {CssClasses} from "./ViewCommon";
 
 export interface IViewController {
-    initialize(): void; //Get html references
-    preload(): void //Setup event listeners, etc
-    load(): void; //When the user sees the view
+    initialize(): void; //Initialize jquery selectors
+    preload(): void //Setup event listeners
+    load(): void; //Document ready operations
 }
 
 //Hold all the views for each button of navbar in order + their controllers to execute
@@ -35,11 +36,11 @@ let lastButton = buttonContainers[1];
 for (let i = 0; i < buttonContainers.length; ++i) {
     buttonContainers[i].addEventListener("click", () => {
         //Make last button inactive
-        lastButton.classList.remove("active");
+        lastButton.classList.remove(CssClasses.NavbarActive);
         lastButton = buttonContainers[i];
 
         //Make current button active
-        buttonContainers[i].classList.add("active");
+        buttonContainers[i].classList.add(CssClasses.NavbarActive);
 
         //Inject view html into index.html #view-container
         $("#view-container").html(viewHtml[i]);

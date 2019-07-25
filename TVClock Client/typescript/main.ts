@@ -51,23 +51,20 @@ async function createWindow() {
     mainWindow.on("closed", () => {
         console.log("Program exiting...");
 
-        // Dereference the window object, usually you would store windows
-        // in an array if your app supports multi windows, this is the time
-        // when you should delete the corresponding element.
-        mainWindow.destroy();
-
         //Close networking connections
         try {
             networkManager.disconnect();
         } catch {
         }
 
+        // Dereference the window object
+        mainWindow.destroy();
+
         console.log("Goodbye!");
     });
 }
 
-// electron has finished initialization
-// ready to create browser windows.
+// electron has finished initialization, ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on("ready", createWindow);
 
@@ -87,6 +84,3 @@ app.on("activate", async () => {
         await createWindow();
     }
 });
-
-// In this file you can include the rest of your app"s specific main process
-// code. You can also put them in separate files and require them here.

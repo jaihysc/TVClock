@@ -1,6 +1,9 @@
+//Main
+
 import {NetworkingStatus, NetworkOperation, RequestType} from "./RequestTypes";
 import {Socket} from "net";
 import BrowserWindow = Electron.BrowserWindow;
+import {StringTags} from "./ViewCommon";
 
 //Handles communication between the client and server
 
@@ -80,7 +83,7 @@ export class NetworkManager {
                     //Update requests will use the channel specified by dataIdentifiers with "-update" appended at the end
                     //schedule-view-scheduleItems would become schedule-view-scheduleItems-update
                     this.window.webContents.send(
-                        returnedPacket.dataIdentifiers[i] + "-update", returnedPacket.data[i]);
+                        returnedPacket.dataIdentifiers[i] + StringTags.NetworkingUpdateEvent, returnedPacket.data[i]);
                 }
                 return;
             }
