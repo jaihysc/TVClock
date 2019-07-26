@@ -65,6 +65,14 @@ export class ScheduleViewManager implements IViewController {
     }
 
     preload(): void {
+        //Networking updates
+        ipcRenderer.on(this.scheduleItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, data: any) => {
+            this.updateScheduleItems(data, false);
+        });
+        ipcRenderer.on(this.periodItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, data: any) => {
+            this.updatePeriodItems(data, false);
+        });
+
         this.addButton.on("click", () => {
             let textInput = String(this.inputText .val());
             if (textInput == "") {
@@ -165,11 +173,11 @@ export class ScheduleViewManager implements IViewController {
 
                 let scheduleData: ScheduleItemGeneric[] | undefined = undefined;
                 if (retrievedScheduleIData != undefined && retrievedScheduleIData.data != undefined)
-                    scheduleData = JSON.parse(retrievedScheduleIData.data[0]);
+                    scheduleData = JSON.parse(retrievedScheduleIData.data)[0];
 
                 let periodData: ScheduleItemGeneric[] | undefined = undefined;
                 if (retrievedPeriodData != undefined && retrievedPeriodData.data != undefined )
-                    periodData = JSON.parse(retrievedPeriodData.data[0]);
+                    periodData = JSON.parse(retrievedPeriodData.data)[0];
 
                 //Generate default schedule list if scheduleData or periodData is not defined by the server
                 if (scheduleData == undefined || periodData == undefined) {
@@ -211,13 +219,6 @@ export class ScheduleViewManager implements IViewController {
                 let retrievedPeriodItems = ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.periodItemsIdentifier);
                 this.updatePeriodItems(retrievedPeriodItems, false);
             }
-
-            ipcRenderer.on(this.scheduleItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, data: string) => {
-                this.updateScheduleItems(JSON.parse(data), false);
-            });
-            ipcRenderer.on(this.periodItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, data: string) => {
-                this.updatePeriodItems(JSON.parse(data), false);
-            });
         });
     }
 
@@ -383,8 +384,8 @@ export class ScheduleViewManager implements IViewController {
 
     }
 
-    private enterEditMode() {
-        if (this.editingPeriod)
+    private exitEditMode() {
+        if (!this.editingPeriod)
             return;
         this.editingPeriod = false;
         this.addButton.html("Add period");
@@ -393,8 +394,8 @@ export class ScheduleViewManager implements IViewController {
 
         this.inputText .val("");
     }
-    private exitEditMode() {
-        if (!this.editingPeriod)
+    private enterEditMode() {
+        if (this.editingPeriod)
             return;
         //Rename add task button to update task
         this.editingPeriod = true;

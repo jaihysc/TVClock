@@ -4,23 +4,26 @@ import {NetworkingStatus, NetworkOperation, RequestType} from "./RequestTypes";
 import {Socket} from "net";
 import BrowserWindow = Electron.BrowserWindow;
 import {StringTags} from "./ViewCommon";
+import {Connection} from "./Connection";
 
 //Handles communication between the client and server
 
 //Class to serialize / deserialize responses to and from the server
 class NetworkingPacket {
-    requestType: String | undefined;
-    data: string[] | undefined;
+    requestType: string | undefined;
+    data: string | undefined; //Data is stored as a json string
     dataIdentifiers: string[] | undefined;
     timestamp: number | undefined;
     id: number; //Used for identifying the response, which will be on the same id
+    sendUpdate: boolean; //Whether or not the server should send a post upon receiving a get request
 
-    constructor(requestType: RequestType, data: string[], dataIdentifiers: string[], timestamp: number, id: number) {
+    constructor(requestType: RequestType, data: string, dataIdentifiers: string[], timestamp: number, id: number, sendPost: boolean = true) {
         this.requestType = requestType;
         this.data = data;
         this.dataIdentifiers = dataIdentifiers;
         this.timestamp = timestamp;
         this.id = id;
+        this.sendUpdate = sendPost;
     }
 }
 
@@ -79,11 +82,12 @@ export class NetworkManager {
                 if (returnedPacket.dataIdentifiers == undefined || returnedPacket.data == undefined)
                     return;
 
+                let dataItems: any = JSON.parse(returnedPacket.data);
                 for (let i = 0; i < returnedPacket.dataIdentifiers.length; ++ i) {
                     //Update requests will use the channel specified by dataIdentifiers with "-update" appended at the end
                     //schedule-view-scheduleItems would become schedule-view-scheduleItems-update
                     this.window.webContents.send(
-                        returnedPacket.dataIdentifiers[i] + StringTags.NetworkingUpdateEvent, returnedPacket.data[i]);
+                        returnedPacket.dataIdentifiers[i] + StringTags.NetworkingUpdateEvent, dataItems);
                 }
                 return;
             }
@@ -111,7 +115,11 @@ export class NetworkManager {
             this.checkConnectionId(id);
 
             console.log("Networking | Connection closed");
-            this.window.webContents.send(NetworkingStatus.SetStatus, "disconnected");
+            try {
+                this.window.webContents.send(NetworkingStatus.SetStatus, "disconnected");
+            } catch {
+                console.log("Networking | Connection closed, failed to send disconnect status");
+            }
         };
         this.errorCallback = (id: number, str: string) => {
             if (id < this.activeConnectionId)
@@ -138,25 +146,19 @@ export class NetworkManager {
             this.activeConnectionId = id;
     }
 
-    send(event: any, requestType: RequestType, identifiers: string[], data: any[]) {
+    send(event: any, requestType: RequestType, identifiers: string[], data: any[], sendUpdate: boolean = true) {
         if (!this.networkConnected || this.connection == undefined) {
             event.returnValue = undefined; //Return undefined because we are not connected
             return;
         }
 
         let id = this.networkingId++;
-        let dataJson: string[] = [];
-
-        //Serialize data into string arrays first
-        if (data != undefined) {
-            dataJson.push(JSON.stringify(data));
-        }
 
         //Log the return event in an array for a data reply
         this.queuedRequests.push({id: id, event: event});
 
         //Serialize into json string and send it to the server
-        let str = JSON.stringify(new NetworkingPacket(requestType, dataJson, identifiers, Date.now(), id));
+        let str = JSON.stringify(new NetworkingPacket(requestType, JSON.stringify(data), identifiers, Date.now(), id, sendUpdate));
         this.connection.sendString(str, () => {
             console.log("Networking | Sent: " + str);
         });
@@ -221,44 +223,5 @@ export class NetworkManager {
 
         }, this.dataCallback, this.closeCallback, this.errorCallback);
         this.connect();
-    }
-}
-
-class Connection {
-    networkClient: Socket;
-    id: number;
-
-    constructor(id: number,
-                ready: (id: number) => void, data: (id: number, response: Buffer) => void,
-                close: (id: number) => void, error: (id: number, str: string) => void) {
-        let net = require("net");
-        this.networkClient = new net.Socket();
-        this.id = id;
-
-        //Run the callback only once after the first initial connection
-        this.networkClient.on(NetworkingStatus.Ready,
-            () => { ready(this.id); });
-
-        this.networkClient.on(NetworkingStatus.Data,
-            (response: Buffer) => { data(this.id, response) });
-
-        this.networkClient.on(NetworkingStatus.Close,
-            () => { close(this.id); });
-
-        this.networkClient.on(NetworkingStatus.Error,
-            (str: string) => { error(this.id, str); });
-    }
-
-    sendString(str: string, callback: () => void) {
-        this.networkClient.write(str + "\r\n", callback);
-    }
-
-    connect(hostname: string, port: number, callback: () => void) {
-        //Attempt to establish connection on specified port
-        this.networkClient.connect(port, hostname, callback);
-    }
-
-    disconnect() {
-        this.networkClient.end();
     }
 }

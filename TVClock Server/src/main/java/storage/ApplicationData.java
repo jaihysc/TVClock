@@ -13,7 +13,7 @@ public class ApplicationData {
     public static ScheduleItemGeneric[] periodItems;
 
 
-    public static String weatherApiKey;
-    public static String noticeBarDocumentId;
+    public static String openWeatherMapKey;
+    public static String googleDocsDocumentId;
 }
 

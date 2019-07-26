@@ -38,8 +38,8 @@ async function createWindow() {
     });
 
     //Sends specified identifiers with RequestType and returns the response
-    ipcMain.on(NetworkOperation.Send, (event: any, args: { requestType: RequestType; identifiers: any[]; data: any[]}) => {
-        networkManager.send(event, args.requestType, args.identifiers, args.data);
+    ipcMain.on(NetworkOperation.Send, (event: any, args: { requestType: RequestType; identifiers: any[]; data: any[]; sendUpdate: boolean}) => {
+        networkManager.send(event, args.requestType, args.identifiers, args.data, args.sendUpdate);
     });
 
     //Allow for changing of port + hostname
@@ -84,3 +84,7 @@ app.on("activate", async () => {
         await createWindow();
     }
 });
+
+export function networkSend() {
+
+}

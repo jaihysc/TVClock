@@ -2,8 +2,9 @@
 //Manager for settings view
 
 import { ipcRenderer } from "electron";
-import {NetworkOperation} from "./RequestTypes";
+import {NetworkOperation, RequestType} from "./RequestTypes";
 import {IViewController} from "./viewManager";
+import {StringTags} from "./ViewCommon";
 
 export class SettingViewManager implements IViewController {
     networkingHostname!: JQuery<HTMLElement>;
@@ -11,11 +12,17 @@ export class SettingViewManager implements IViewController {
     networkingUpdateBtn!: JQuery<HTMLElement>;
     apiUpdateBtn!: JQuery<HTMLElement>;
 
+    openWeatherMapKey!: JQuery<HTMLElement>;
+    googleDocsDocumentId!: JQuery<HTMLElement>;
+
     initialize(): void {
         this.networkingHostname = $("#networking-hostname");
         this.networkingPort = $("#networking-port");
         this.networkingUpdateBtn = $("#networking-info-update-btn");
         this.apiUpdateBtn = $("#api-services-update-btn");
+
+        this.openWeatherMapKey = $("#openWeatherMap-key");
+        this.googleDocsDocumentId = $("#google-docs-document-id");
     }
 
     preload(): void {
@@ -34,11 +41,29 @@ export class SettingViewManager implements IViewController {
                 {hostname: hostname, port: Number(this.networkingPort.val())}
             );
         });
+        this.apiUpdateBtn.on("click", () => {
+            let postIdentifiers: string[] = [];
+            let postFields: string[] = []; //Fields that are going to be posted to the server
+
+            this.validateAPIField(this.openWeatherMapKey, StringTags.OpenWeatherMapKey, postIdentifiers, postFields);
+            this.validateAPIField(this.googleDocsDocumentId, StringTags.GoogleDocsDocumentId, postIdentifiers, postFields);
+
+            if (postIdentifiers.length > 0)
+                ipcRenderer.send(NetworkOperation.Send, {requestType: RequestType.Post, identifiers: postIdentifiers, data: postFields, sendUpdate: false});
+        })
     }
 
     load(): void {
         $(() => {
-            //todo, stuff here
         })
+    }
+
+    private validateAPIField(field: JQuery<HTMLElement>, identifier: string, postIdentifiers: string[], postFields: string[]) {
+        //Only add fields that are filled out
+        if (field.val() == "")
+            return;
+
+        postIdentifiers.push(identifier);
+        postFields.push(String(field.val()));
     }
 }

@@ -27,33 +27,34 @@ public class PacketHandler implements IMessageReceived {
     public void handleMessage(Packet receivedPacket, Connection connection) {
         switch (receivedPacket.requestType) {
             case Post: //POST request from client
-                for (int i = 0; i < receivedPacket.data.length; ++i) {
-                    updateData(receivedPacket.dataIdentifiers[i], receivedPacket.data[i]);
-                }
+                updateData(receivedPacket.data, receivedPacket.dataIdentifiers);
 
                 //send UPDATE out to all clients
-                sendUpdateRequest(receivedPacket.data, receivedPacket.dataIdentifiers);
+                if (receivedPacket.sendUpdate)
+                    sendUpdateRequest(receivedPacket.data, receivedPacket.dataIdentifiers);
                 break;
 
             case Get: //GET request from client
-                ArrayList<String> returnData = new ArrayList<>();
+                ArrayList<Object> returnData = new ArrayList<>();
                 for (String identifier : receivedPacket.dataIdentifiers) {
-                    returnData.add(retrieveDataJson(identifier));
+                    returnData.add(retrieveData(identifier));
                 }
-                Packet returnPacket = new Packet(
-                        RequestType.Response, returnData.toArray(new String[0]), receivedPacket.dataIdentifiers, receivedPacket.id);
 
                 Gson gson = new Gson();
+                Packet returnPacket = new Packet(
+                        RequestType.Response, gson.toJson(returnData), receivedPacket.dataIdentifiers, receivedPacket.id);
+
                 connection.sendMessage(gson.toJson(returnPacket, Packet.class));
                 break;
         }
     }
 
     public static void sendItemUpdateRequest(String identifier) {
-        sendUpdateRequest(new String[]{retrieveDataJson(identifier)}, new String[]{identifier});
+        Gson gson = new Gson();
+        sendUpdateRequest(gson.toJson(retrieveData(identifier)), new String[]{identifier});
     }
 
-    private static void sendUpdateRequest(String[] data, String[] dataIdentifiers) {
+    private static void sendUpdateRequest(String data, String[] dataIdentifiers) {
         Gson gson = new Gson();
 
         Packet updatePacket = new Packet(RequestType.Update, data, dataIdentifiers);
@@ -65,18 +66,16 @@ public class PacketHandler implements IMessageReceived {
      * @param identifier Identifier of data to access
      * @return Data serialized to json
      */
-    private static String retrieveDataJson(String identifier) {
-        Gson gson = new Gson();
-
+    private static Object retrieveData(String identifier) {
         switch (identifier) {
             case ApplicationDataIdentifiers.taskItems:
-                return gson.toJson(ApplicationData.taskItems, TaskItem[].class);
+                return ApplicationData.taskItems;
 
             case ApplicationDataIdentifiers.scheduleItems:
-                return gson.toJson(ApplicationData.scheduleItems, TaskItem[].class);
+                return ApplicationData.scheduleItems;
 
             case ApplicationDataIdentifiers.periodItems:
-                return gson.toJson(ApplicationData.periodItems, TaskItem[].class);
+                return ApplicationData.periodItems;
         }
 
         return null;
@@ -84,31 +83,45 @@ public class PacketHandler implements IMessageReceived {
 
     /**
      * Updates data marked by the identifier with the new provided data
-     * @param identifier Target data identifier
      * @param json Value of new data
+     * @param identifiers Target data identifiers
      */
-    private static void updateData(String identifier, String json) {
+    private static void updateData(String json, String[] identifiers) {
         Gson gson = new Gson();
-        switch (identifier) {
-            case ApplicationDataIdentifiers.taskItems:
-                ApplicationData.taskItems = gson.fromJson(json, TaskItem[].class);
 
-                //Add taskItem name to a list to show up on screen
-                List<TaskItem> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
-                synchronized (taskListSync) {
-                    taskListSync.clear();
-                    Collections.addAll(taskListSync, ApplicationData.taskItems);
-                }
+        int i = 0;
+        //Json can be deserialized into string array, and assigned to identifiers in this loop
+        for (String identifier : identifiers) {
+            switch (identifier) {
+                case ApplicationDataIdentifiers.taskItems:
+                    ApplicationData.taskItems = gson.fromJson(json, TaskItem[].class);
 
-                break;
+                    //Add taskItem name to a list to show up on screen
+                    List<TaskItem> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
+                    synchronized (taskListSync) {
+                        taskListSync.clear();
+                        Collections.addAll(taskListSync, ApplicationData.taskItems);
+                    }
 
-            case ApplicationDataIdentifiers.scheduleItems:
-                ApplicationData.scheduleItems = gson.fromJson(json, ScheduleItemGeneric[].class);
-                break;
+                    break;
 
-            case ApplicationDataIdentifiers.periodItems:
-                ApplicationData.periodItems = gson.fromJson(json, ScheduleItemGeneric[].class);
-                break;
+                case ApplicationDataIdentifiers.scheduleItems:
+                    ApplicationData.scheduleItems = gson.fromJson(json, ScheduleItemGeneric[].class);
+                    break;
+
+                case ApplicationDataIdentifiers.periodItems:
+                    ApplicationData.periodItems = gson.fromJson(json, ScheduleItemGeneric[].class);
+                    break;
+
+                case ApplicationDataIdentifiers.openWeatherMapKey:
+                    ApplicationData.openWeatherMapKey = gson.fromJson(json, String[].class)[i];
+                    break;
+
+                case ApplicationDataIdentifiers.googleDocsDocumentId:
+                    ApplicationData.googleDocsDocumentId = gson.fromJson(json, String[].class)[i];
+                    break;
+            }
+            i++;
         }
     }
 }

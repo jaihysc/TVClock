@@ -63,8 +63,8 @@ export class TodoViewManager implements IViewController {
         });
 
         //Networking Update request handler
-        ipcRenderer.on(this.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, data: string) => {
-            this.updateTasks(JSON.parse(data), false);
+        ipcRenderer.on(this.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, data: any[]) => {
+            this.updateTasks(data, false);
         });
 
         //Adds a new task to the task list
@@ -134,7 +134,7 @@ export class TodoViewManager implements IViewController {
             if (ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.serverFetchIdentifier) == undefined) {
                 //Send fetch request to server
                 let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [this.tasksIdentifier]});
-                this.updateTasks(JSON.parse(jsonData.data[0]), false);
+                this.updateTasks(JSON.parse(jsonData.data)[0], false);
 
                 //Save that a fetch has already been performed to the server
                 ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.serverFetchIdentifier, data: true});
@@ -149,6 +149,8 @@ export class TodoViewManager implements IViewController {
         this.taskListTasks = []; //Clear tasks first
         if (data != undefined) {
             for (let i = 0; i < data.length; ++i) {
+                if (data[i] == undefined)
+                    continue;
                 //Reconvert date text into date
                 this.taskListTasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
             }

@@ -14,6 +14,7 @@ import com.google.api.services.docs.v1.Docs;
 import com.google.api.services.docs.v1.DocsScopes;
 import com.google.api.services.docs.v1.model.Document;
 import com.google.api.services.docs.v1.model.StructuralElement;
+import storage.ApplicationData;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,8 +30,6 @@ public class DocsFacade {
 
     // Google sample doc:
     // https://docs.google.com/document/d/195j9eDD3ccgjQRttHhJPymLJUCOUjs-jmwTrekvdjFE/edit
-    //TODO switch to private editable doc instead of testing doc
-    private static final String DocumentId = "195j9eDD3ccgjQRttHhJPymLJUCOUjs-jmwTrekvdjFE";
 
     private static final List<String> Scopes = Collections.singletonList(DocsScopes.DOCUMENTS_READONLY);
     private static final String CredentialsPath = "/confidential/credentials.json";
@@ -68,7 +67,7 @@ public class DocsFacade {
                     .setApplicationName(ApplicationName)
                     .build();
 
-            Document response = service.documents().get(DocumentId).execute();
+            Document response = service.documents().get(ApplicationData.googleDocsDocumentId).execute();
 
             List<StructuralElement> content = response.getBody().getContent();
             StringBuilder text = new StringBuilder();
@@ -83,7 +82,7 @@ public class DocsFacade {
             return text.toString();
 
         } catch (Exception e) {
-            System.out.println("DocsFacade | Error fetching document");
+            System.out.println("DocsFacade | Error fetching document at id " + ApplicationData.googleDocsDocumentId);
             return "Error fetching notices";
         }
     }
