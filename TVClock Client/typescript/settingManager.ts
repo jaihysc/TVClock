@@ -14,6 +14,7 @@ export class SettingViewManager implements IViewController {
 
     openWeatherMapKey!: JQuery<HTMLElement>;
     googleDocsDocumentId!: JQuery<HTMLElement>;
+    openWeatherMapLocationCity!: JQuery<HTMLElement>;
 
     initialize(): void {
         this.networkingHostname = $("#networking-hostname");
@@ -23,6 +24,7 @@ export class SettingViewManager implements IViewController {
 
         this.openWeatherMapKey = $("#openWeatherMap-key");
         this.googleDocsDocumentId = $("#google-docs-document-id");
+        this.openWeatherMapLocationCity = $("#weather-location-city");
     }
 
     preload(): void {
@@ -47,6 +49,7 @@ export class SettingViewManager implements IViewController {
 
             this.validateAPIField(this.openWeatherMapKey, StringTags.OpenWeatherMapKey, postIdentifiers, postFields);
             this.validateAPIField(this.googleDocsDocumentId, StringTags.GoogleDocsDocumentId, postIdentifiers, postFields);
+            this.validateAPIField(this.openWeatherMapLocationCity, StringTags.OpenWeatherMapLocationCity, postIdentifiers, postFields);
 
             if (postIdentifiers.length > 0)
                 ipcRenderer.send(NetworkOperation.Send, {requestType: RequestType.Post, identifiers: postIdentifiers, data: postFields, sendUpdate: false});

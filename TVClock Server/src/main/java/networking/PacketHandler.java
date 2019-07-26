@@ -116,9 +116,11 @@ public class PacketHandler implements IMessageReceived {
                 case ApplicationDataIdentifiers.openWeatherMapKey:
                     ApplicationData.openWeatherMapKey = gson.fromJson(json, String[].class)[i];
                     break;
-
                 case ApplicationDataIdentifiers.googleDocsDocumentId:
                     ApplicationData.googleDocsDocumentId = gson.fromJson(json, String[].class)[i];
+                    break;
+                case ApplicationDataIdentifiers.openWeatherMapLocationCity:
+                    ApplicationData.openWeatherMapLocationCity = gson.fromJson(json, String[].class)[i];
                     break;
             }
             i++;

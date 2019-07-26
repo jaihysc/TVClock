@@ -15,5 +15,6 @@ public class ApplicationData {
 
     public static String openWeatherMapKey;
     public static String googleDocsDocumentId;
+    public static String openWeatherMapLocationCity;
 }
 

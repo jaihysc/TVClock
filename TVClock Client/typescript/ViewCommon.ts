@@ -46,5 +46,6 @@ export enum CssClasses {
 export enum StringTags {
     NetworkingUpdateEvent = "-update",
     OpenWeatherMapKey = "open-weather-map-key",
+    OpenWeatherMapLocationCity = "open-weather-map-location-city",
     GoogleDocsDocumentId = "google-docs-document-id"
 }
