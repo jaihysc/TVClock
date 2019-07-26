@@ -10,7 +10,7 @@ import java.io.IOException;
 public class SettingMenu {
     public static void showSettingsScene() {
         Stage stage = new Stage();
-        Parent startup = null;
+        Parent startup;
         try {
             startup = FXMLLoader.load(SettingMenu.class.getClassLoader().getResource("layout/Startup.fxml"));
             Scene scene = new Scene(startup, 1920, 1080);

@@ -1,9 +1,6 @@
 package taskList;
 
-import networking.ConnectionManager;
 import networking.PacketHandler;
-import networking.models.Packet;
-import networking.models.RequestType;
 import storage.ApplicationData;
 import storage.ApplicationDataIdentifiers;
 

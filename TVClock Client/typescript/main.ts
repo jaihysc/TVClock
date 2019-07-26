@@ -17,7 +17,7 @@ async function createWindow() {
     await mainWindow.loadFile("startup.html");
 
     // Open the DevTools.
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
 
     require("./dataPersistence");
 

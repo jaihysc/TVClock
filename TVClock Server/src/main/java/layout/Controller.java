@@ -44,7 +44,7 @@ public class Controller implements Initializable {
     public Label precipitationLabel;
     public Label windDirectionLabel;
     public Label windSpeedLabel;
-    
+
     public Label forecastLabel0;
     public Label forecastLabel1;
     public Label forecastLabel2;
