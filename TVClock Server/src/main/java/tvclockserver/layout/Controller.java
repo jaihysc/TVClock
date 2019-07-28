@@ -57,11 +57,13 @@ public class Controller implements Initializable {
     public ProgressBar dayProgressionBar;
     public Label scheduleBar;
     public Label schedulePreviewBar;
+    public Label scheduleBarPreviewInline;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         //Open the startup stage to get the networking hostname and port
         SettingMenu.showSettingsScene();
+        collapseSchedulePreview(); //Disable inline schedule bar on startup
 
         //-----------------------------
         //Initialize display elements
@@ -95,6 +97,7 @@ public class Controller implements Initializable {
                 if (nextHour > 23)
                     nextHour = 0;
                 setScheduleBarLabel(nextHour, schedulePreviewBar);
+                setScheduleBarLabel(nextHour, scheduleBarPreviewInline);
             }
 
         }), new KeyFrame(Duration.seconds(10)));
@@ -103,16 +106,16 @@ public class Controller implements Initializable {
         t.play();
     }
 
-    private void setScheduleBarLabel(int nextHour, Label schedulePreviewBar) {
+    private void setScheduleBarLabel(int nextHour, Label label) {
         if (ApplicationData.scheduleItems[nextHour] != null) {
-            schedulePreviewBar.setText(ApplicationData.scheduleItems[nextHour].periodName);
+            label.setText(ApplicationData.scheduleItems[nextHour].periodName);
 
             Color color = Color.web(ApplicationData.scheduleItems[nextHour].color);
-            schedulePreviewBar.setBackground(new Background(
+            label.setBackground(new Background(
                     new BackgroundFill(
                             color,
                             CornerRadii.EMPTY, Insets.EMPTY)));
-            schedulePreviewBar.setTextFill(color.invert());
+            label.setTextFill(color.invert());
         }
     }
 
@@ -127,9 +130,20 @@ public class Controller implements Initializable {
             taskList.getItems().clear(); //Clear the taskList before adding new items
             List<TaskItem> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
 
-            int wrapCharacter = (int) Math.round(taskListSplitPane.getDividerPositions()[0] * 100);
             //Synchronise since this runs in a thread
             synchronized (taskListSync) {
+                //Collapse the divider if there are no items
+                if (taskListSync.size() == 0) {
+                    taskListSplitPane.setDividerPosition(0, 0);
+                    collapseSchedulePreview();
+                    return;
+                } else {
+                    taskListSplitPane.setDividerPosition(0, 0.2);
+                    expandSchedulePreview();
+                }
+
+                int wrapCharacter = (int) Math.round(taskListSplitPane.getDividerPositions()[0] * 100);
+
                 for (var item : taskListSync) {
                     //Add task if start date is greater than current date and end date is less than current date
                     if (TaskListManager.isDateCurrent(item.startDate, item.endDate))
@@ -255,4 +269,18 @@ public class Controller implements Initializable {
         return directions[ (int)Math.round((  (degree % 360) / 45)) % 8 ];
     }
 
+    /**
+     * Moves the schedule preview from the task list inline with the current schedule
+     */
+    private void collapseSchedulePreview() {
+        scheduleBarPreviewInline.setManaged(true);
+        scheduleBar.setPrefWidth(1920/2);
+    }
+    /**
+     * Pushes back schedule preview into the task list, expanding the bar for the current schedule
+     */
+    private void expandSchedulePreview() {
+        scheduleBarPreviewInline.setManaged(false);
+        scheduleBar.setPrefWidth(1920);
+    }
 }

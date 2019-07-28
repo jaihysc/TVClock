@@ -122,8 +122,13 @@
 <!--    Schedule bar-->
     <bottom>
         <VBox>
-            <Label alignment="CENTER" maxWidth="Infinity"
-                   text="None" BorderPane.alignment="CENTER" fx:id="scheduleBar"/>
+            <TilePane prefColumns="2" prefRows="1" prefWidth="1920">
+                    <!--This is used when the task list is collapsed: 1920 / 2-->
+                    <Label alignment="CENTER" prefWidth="960"
+                           text="None" BorderPane.alignment="CENTER" fx:id="scheduleBarPreviewInline"/>
+                    <Label alignment="CENTER" prefWidth="960"
+                           text="None" BorderPane.alignment="CENTER" fx:id="scheduleBar"/>
+            </TilePane>
 
             <!--        bar which shows the progression through the day-->
             <ProgressBar fx:id="dayProgressionBar" prefWidth="Infinity"/>

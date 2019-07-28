@@ -95,11 +95,7 @@
 }
 
 /* Schedule */
-#scheduleBar {
-    -fx-font-size: 20px;
-}
-
-#schedulePreviewBar {
+#scheduleBar, #schedulePreviewBar, #scheduleBarPreviewInline {
     -fx-font-size: 20px;
 }
 
