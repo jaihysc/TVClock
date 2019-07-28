@@ -9,7 +9,9 @@ build/
 StoredCredential
 
 # Ignore the compiled js files in client app folder
-**/app/*.js
+*.js
+dist/
+
 
 # Ignore Gradle GUI config
 gradle-app.setting

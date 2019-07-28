@@ -16,7 +16,7 @@ export interface IViewController {
 let viewHtml: string[] = [];
 let viewControllers: IViewController[] = [new TodoViewManager(), new ScheduleViewManager(), new SettingViewManager()]; //!! Add view controllers here !!
 
-const viewPath = "./app/views/";
+const viewPath = __dirname + "/views/";
 
 //Read and store the view html files in alphanumeric order
 let fs = require("fs");

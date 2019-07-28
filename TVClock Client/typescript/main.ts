@@ -14,7 +14,7 @@ async function createWindow() {
     });
 
     mainWindow.setMenuBarVisibility(false);
-    await mainWindow.loadFile("startup.html");
+    await mainWindow.loadFile("./startup.html");
 
     // Open the DevTools.
     // mainWindow.webContents.openDevTools();
@@ -24,7 +24,7 @@ async function createWindow() {
     //Networking
     let networkManager = new NetworkManager(mainWindow, async () => {
         //Load pages once connection is established
-        await mainWindow.loadFile("index.html");
+        await mainWindow.loadFile("./index.html");
         mainWindow.webContents.send(NetworkingStatus.SetStatus, "connected");
         mainWindow.webContents.send(NetworkOperation.SetDisplayAddress,{
             hostname: networkManager.hostname,
@@ -84,7 +84,3 @@ app.on("activate", async () => {
         await createWindow();
     }
 });
-
-export function networkSend() {
-
-}
