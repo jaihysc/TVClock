@@ -82,8 +82,8 @@ public class DocsFacade {
             return text.toString();
 
         } catch (Exception e) {
-            System.out.println("DocsFacade | Error fetching document at id " + ApplicationData.googleDocsDocumentId);
-            return "Error fetching notices";
+            System.out.println("DocsFacade | Error fetching document at id: " + ApplicationData.googleDocsDocumentId);
+            return "";
         }
     }
 }

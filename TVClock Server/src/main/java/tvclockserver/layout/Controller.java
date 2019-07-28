@@ -179,7 +179,16 @@ public class Controller implements Initializable {
      */
     private void updateNoticeBar() {
         Timeline notice = new Timeline(new KeyFrame(Duration.ZERO, e -> {
-            noticeText.setText(DocsFacade.fetchDoc());
+            String text = DocsFacade.fetchDoc();
+
+            //Hide notice bar if no text is present
+            if (text.isBlank()) {
+                noticeText.setManaged(false);
+                noticeText.setText("");
+            } else {
+                noticeText.setManaged(true);
+                noticeText.setText(text);
+            }
 
         }), new KeyFrame(Duration.minutes(1)));
 
