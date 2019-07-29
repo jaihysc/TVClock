@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'">
+
+    <title>TVClock</title>
+
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <!--Font awesome for icons-->
+    <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <!--Bootstrap stylings-->
+    <link rel="stylesheet" type="text/css" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+</head>
+
+<body>
+    <!--Nav bar-->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+<!--        <a class="navbar-brand" href="#">TVClock</a>-->
+
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link"><p class="navbar-item">Tasks</p></a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link"><p class="navbar-item">Schedule</p></a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link"><p class="navbar-item">Settings</p></a>
+                </li>
+
+            </ul>
+        </div>
+    </nav>
+
+    <div id="view-container" class="container-fluid">
+        <!--Inject each menu/view here-->
+    </div>
+
+    <!--Status bar-->
+    <div class="fixed-bottom container-fluid align-text-bottom" id="status-bar">
+        <div class="row">
+            <div class="col-6">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="row">
+                            <p class="status-bar-text" id="connection-status"></p>
+                            <button id="connection-refresh" class="btn status-bar-btn"><i class="fa fa-refresh white"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="row float-right">
+                            <p class="status-bar-text"><i class="fa fa-server"></i></p>
+                            <p class="status-bar-text" id="connected-server-address"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="row float-right">
+                    <p class="status-bar-text"><i class="fa fa-bell white"></i></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--js libraries-->
+    <script src="scripts.js"></script>
+</body>
+
+<script>
+    // You can also require other files to run in this process
+    require('./renderer.js')
+</script>
+</html>

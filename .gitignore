@@ -2,14 +2,16 @@
 out/
 node_modules/
 TVClock Server- Java.iml
-confidential/
+credentials.json
 .gradle/
 build/
 
 StoredCredential
 
 # Ignore the compiled js files in client app folder
-**/app/*.js
+*.js
+dist/
+
 
 # Ignore Gradle GUI config
 gradle-app.setting

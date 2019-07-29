@@ -1,0 +1,137 @@
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane fx:controller="tvclockserver.layout.Controller" id="BorderPane" xmlns:fx="http://javafx.com/fxml"
+            style="-fx-background-color: black">
+    <center>
+        <SplitPane fx:id="taskListSplitPane" dividerPositions="0.20" focusTraversable="true" prefHeight="600.0" prefWidth="200.0">
+            <BorderPane style="-fx-background-color: black;">
+                <!--Task list-->
+                <center>
+                    <ListView fx:id="taskList">
+                    </ListView>
+                </center>
+                <bottom>
+                    <!--Shows the next upcoming schedule item-->
+                    <Label alignment="CENTER" maxWidth="Infinity"
+                           text="None" BorderPane.alignment="CENTER" fx:id="schedulePreviewBar"/>
+                </bottom>
+            </BorderPane>
+
+            <BorderPane style="-fx-background-color: black;">
+                <center>
+                    <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+                        <HBox alignment="CENTER">
+                            <Label fx:id="timeLabel" id="timeLabel" text="9:00:50"/>
+                            <VBox alignment="BOTTOM_CENTER">
+                                <Label fx:id="amPmLabel" id="amPmLabel" text="AM"/>
+                            </VBox>
+                        </HBox>
+                        <Label fx:id="dateLabel" id="dateLabel" text="Sunday, 27 June 2019"/>
+                    </VBox>
+                </center>
+
+                <bottom>
+                    <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+<!--                        Weather bar-->
+                        <BorderPane>
+                            <left>
+                                <HBox id="temperatureBar">
+                                    <Label fx:id="temperatureLabel" styleClass="weatherBarElement" text="--.-°C" />
+                                    <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+                                        <Label fx:id="uvIndexLabel" styleClass="weatherBarElement" text="UV | --" />
+                                    </VBox>
+                                    <VBox alignment="CENTER">
+                                        <Label fx:id="humidityLabel" styleClass="weatherBarElement" text="H | ---%"/>
+                                    </VBox>
+                                </HBox>
+                            </left>
+
+                            <center>
+                                <Label fx:id="weatherDescription"  text="-" />
+                            </center>
+
+                            <right>
+                                <HBox id="environmentBar">
+                                    <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+                                        <Label fx:id="precipitationLabel" styleClass="weatherBarElement" text="P | ---mm" />
+                                    </VBox>
+                                    <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+                                        <Label fx:id="windDirectionLabel" styleClass="weatherBarElement" text="--" />
+                                    </VBox>
+                                    <Label fx:id="windSpeedLabel" styleClass="weatherBarElement" text="-.-- Km/h" />
+                                </HBox>
+                            </right>
+
+                            <padding>
+                                <Insets bottom="2"/>
+                            </padding>
+                        </BorderPane>
+
+<!--                        White horizontal divider-->
+                        <GridPane style="-fx-background-color: gray">
+                            <padding>
+                                <Insets top="1"/>
+                            </padding>
+                        </GridPane>
+
+<!--                        Forecast bar-->
+                        <GridPane>
+                            <padding>
+                                <Insets top="1"/>
+                            </padding>
+                            <columnConstraints>
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="20.0" percentWidth="20.0" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="20.0" percentWidth="20.0" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="20.0" percentWidth="20.0" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="20.0" percentWidth="20.0" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="20.0" percentWidth="20.0" />
+                            </columnConstraints>
+
+                            <VBox GridPane.columnIndex="0" alignment="CENTER">
+                                <Label fx:id="forecastLabel0" styleClass="forecastLabel" text="1 day ahead"/>
+                            </VBox>
+                            <VBox GridPane.columnIndex="1" alignment="CENTER">
+                                <Label fx:id="forecastLabel1" styleClass="forecastLabel" text="2 days ahead"/>
+                            </VBox>
+                            <VBox GridPane.columnIndex="2" alignment="CENTER">
+                                <Label fx:id="forecastLabel2" styleClass="forecastLabel" text="3 days ahead"/>
+                            </VBox>
+                            <VBox GridPane.columnIndex="3" alignment="CENTER">
+                                <Label fx:id="forecastLabel3" styleClass="forecastLabel" text="4 days ahead"/>
+                            </VBox>
+                            <VBox GridPane.columnIndex="4" alignment="CENTER">
+                                <Label fx:id="forecastLabel4" styleClass="forecastLabel" text="5 days ahead"/>
+                            </VBox>
+                        </GridPane>
+                    </VBox>
+                </bottom>
+            </BorderPane>
+        </SplitPane>
+    </center>
+
+<!--    Notice bar-->
+    <top>
+        <VBox id="noticeBar" BorderPane.alignment="CENTER" alignment="CENTER">
+            <Label fx:id="noticeText" id="noticeText" text="Notice bar, this bar will be used to annoy me" BorderPane.alignment="CENTER" alignment="CENTER"/>
+        </VBox>
+    </top>
+
+
+<!--    Schedule bar-->
+    <bottom>
+        <VBox>
+            <TilePane prefColumns="2" prefRows="1" prefWidth="1920">
+                    <!--This is used when the task list is collapsed: 1920 / 2-->
+                    <Label alignment="CENTER" prefWidth="960"
+                           text="None" BorderPane.alignment="CENTER" fx:id="scheduleBarPreviewInline"/>
+                    <Label alignment="CENTER" prefWidth="960"
+                           text="None" BorderPane.alignment="CENTER" fx:id="scheduleBar"/>
+            </TilePane>
+
+            <!--        bar which shows the progression through the day-->
+            <ProgressBar fx:id="dayProgressionBar" prefWidth="Infinity"/>
+        </VBox>
+    </bottom>
+</BorderPane>

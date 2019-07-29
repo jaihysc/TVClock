@@ -2,24 +2,30 @@
   "name": "tvclock-client",
   "version": "1.0.0",
   "description": "Client application for TVClock",
-  "main": "index.js",
-  "scripts": {
-    "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "npm run build && electron app/main.js"
+  "main": "main.js",
+  "author": {
+    "email": "jaihysc@gmail.com",
+    "name": "jaihysc"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jaihysc/TVClock.git"
   },
-  "author": "jaihysc",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/jaihysc/TVClock/issues"
   },
   "homepage": "https://github.com/jaihysc/TVClock#readme",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "npm run build && electron main.js",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
   "devDependencies": {
-    "electron": "^5.0.6"
+    "electron": "^5.0.6",
+    "electron-builder": "^21.1.5"
   },
   "dependencies": {
     "@types/jquery": "^3.3.30",
@@ -27,5 +33,39 @@
     "invert-color": "^2.0.0",
     "jquery": "^3.4.1",
     "popper.js": "^1.15.0"
-  }
+  },
+  "build": {
+    "appId": "TVClock.client",
+    "win": {
+      "target": "portable"
+    },
+    "mac": {
+      "category": "tvclock.client"
+    },
+    "linux": {
+      "target": "pacman",
+      "category": "Utility",
+      "executableName": "tvclock-client"
+    },
+    "asar": false,
+    "files": [
+      "**/*",
+      "!**/typescript",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+    ]
+  },
+  "extraFiles": [
+    "views/"
+  ],
+  "postinstall": "electron-builder install-app-deps"
 }

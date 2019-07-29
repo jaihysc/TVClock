@@ -2,9 +2,10 @@ plugins {
     id 'java'
     id 'application'
     id "org.openjfx.javafxplugin" version "0.0.7"
+    id 'org.beryx.jlink' version '2.10.2'
 }
 
-mainClassName = "Main"
+mainClassName = "tvclockserver.Main"
 
 sourceCompatibility = 11
 targetCompatibility = 11
@@ -24,6 +25,13 @@ dependencies {
 javafx {
     modules = [
             "javafx.controls",
-            "javafx.fxml"
+            "javafx.fxml",
+            "javafx.media"
     ]
+}
+
+jlink {
+    launcher {
+        name = 'tvclock-server'
+    }
 }

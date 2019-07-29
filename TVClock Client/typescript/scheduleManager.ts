@@ -157,7 +157,6 @@ export class ScheduleViewManager implements IViewController {
             ipcRenderer.on(NetworkOperation.Reconnect, () => {
                 //Clear all stored data
                 ipcRenderer.sendSync(LocalStorageOperation.Save, {identifier: fetchFromServerIdentifier, data: undefined});
-
                 //Refresh the view
                 $( ".nav-item a" )[1].click();
             });
@@ -181,6 +180,9 @@ export class ScheduleViewManager implements IViewController {
 
                 //Generate default schedule list if scheduleData or periodData is not defined by the server
                 if (scheduleData == undefined || periodData == undefined) {
+                    //Clear any old items in the 2 lists on reconnect
+                    this.clearAllData();
+
                     //12PM - or 0 in 24 hour
                     this.timeTableAppend(new ScheduleItemGeneric("None", "12 PM", this.defaultPeriodColor));
                     this.scheduleItems.push(new ScheduleItemGeneric("None", "12 PM", this.defaultPeriodColor));
@@ -220,6 +222,13 @@ export class ScheduleViewManager implements IViewController {
                 this.updatePeriodItems(retrievedPeriodItems, false);
             }
         });
+    }
+
+    private clearAllData() {
+        this.scheduleItemContainer.html("");
+        this.periodItemContainer.html("");
+        this.scheduleItems = [];
+        this.periodItems = [];
     }
 
     private updateScheduleItems(data: ScheduleItemGeneric[], sendServerPost: boolean) {
