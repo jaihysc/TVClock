@@ -25,7 +25,8 @@ dependencies {
 javafx {
     modules = [
             "javafx.controls",
-            "javafx.fxml"
+            "javafx.fxml",
+            "javafx.media"
     ]
 }
 

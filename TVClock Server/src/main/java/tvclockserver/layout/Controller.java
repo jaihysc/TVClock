@@ -1,6 +1,5 @@
 package tvclockserver.layout;
 
-import tvclockserver.docs.DocsFacade;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -10,8 +9,11 @@ import javafx.scene.control.*;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
+import tvclockserver.docs.DocsFacade;
 import tvclockserver.networking.SettingMenu;
 import tvclockserver.storage.ApplicationData;
 import tvclockserver.taskList.TaskItem;
@@ -27,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.regex.Pattern;
+
 
 public class Controller implements Initializable {
     public Label timeLabel;
@@ -196,6 +199,9 @@ public class Controller implements Initializable {
         notice.play();
     }
 
+    private int lastHour = 0;
+    private MediaPlayer mediaPlayer = new MediaPlayer(new Media(getClass().getResource("/tvclockserver/hourChime.wav").toExternalForm()));
+
     /**
      * Updates the time and date on screen to the current system time
      */
@@ -209,6 +215,11 @@ public class Controller implements Initializable {
                     .replaceAll(Pattern.quote("."), "") //Remove the dots between A.M. and P.M.
                     .toUpperCase());
 
+            //Loads the hour chime and plays it on every hour
+            if (lastHour != LocalDateTime.now().getHour()) {
+                mediaPlayer.play();
+                lastHour = LocalDateTime.now().getHour();
+            }
         }), new KeyFrame(Duration.millis(500)));
 
         clock.setCycleCount(Animation.INDEFINITE);

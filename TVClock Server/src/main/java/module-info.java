@@ -1,6 +1,7 @@
 module tvclockserver {
     requires javafx.controls;
     requires javafx.fxml;
+    requires javafx.media;
     requires google.api.services.docs.v1.rev20190128;
     requires google.http.client.jackson2;
     requires com.google.api.client;
