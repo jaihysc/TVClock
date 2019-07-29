@@ -6,21 +6,33 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import tvclockserver.networking.ConnectionManager;
 import tvclockserver.networking.PacketHandler;
+import tvclockserver.storage.ApplicationData;
 
 public class StartupController {
     public TextField port;
     public Button confirmButton;
+    public TextField openWeatherMapApiKey;
+    public TextField openWeatherMapLocationCity;
+    public TextField googleDocId;
 
     public void submitNetworkingParameters(ActionEvent actionEvent) {
         //Networking
-        int portNumber;
         try {
-            portNumber = Integer.parseInt(port.getText());
+            int portNumber = Integer.parseInt(port.getText());
+            ConnectionManager.startConnectionManager(portNumber, new PacketHandler());
         } catch (Exception e) {
-            return;
         }
 
-        ConnectionManager.startConnectionManager(portNumber, new PacketHandler());
+        //Set the weather parameters if filled in
+        String val;
+        if (!(val = openWeatherMapApiKey.getText()).equals(""))
+            ApplicationData.openWeatherMapKey = val;
+        if (!(val = openWeatherMapLocationCity.getText()).equals(""))
+            ApplicationData.openWeatherMapLocationCity = val;
+
+        if (!(val = googleDocId.getText()).equals(""))
+            ApplicationData.googleDocsDocumentId = val;
+
 
         //Close this stage
         Stage stage = (Stage) confirmButton.getScene().getWindow();

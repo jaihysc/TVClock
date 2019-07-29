@@ -10,6 +10,17 @@
     <Label text="Port:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
     <TextField fx:id="port" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
 
-    <Label text="Press S to bring up this menu again" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-    <Button text="Confirm" fx:id="confirmButton" onAction="#submitNetworkingParameters" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+
+    <Label text="OpenWeatherMap API Key:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+    <TextField fx:id="openWeatherMapApiKey" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+
+    <Label text="OpenWeatherMap Location City: " GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+    <TextField fx:id="openWeatherMapLocationCity" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+
+
+    <Label text="Notice Google Doc id: " GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+    <TextField fx:id="googleDocId" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
+
+    <Label text="Press S to bring up this menu again" GridPane.columnIndex="0" GridPane.rowIndex="8"/>
+    <Button text="Confirm" fx:id="confirmButton" onAction="#submitNetworkingParameters" GridPane.columnIndex="0" GridPane.rowIndex="9"/>
 </GridPane>

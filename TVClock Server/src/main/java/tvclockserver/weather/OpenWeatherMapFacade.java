@@ -18,8 +18,8 @@ public class OpenWeatherMapFacade {
         return gson.fromJson(response, ForecastResponse.class);
     }
 
-    public static UVIndexResponse getUVIndex() {
-        String response = httpFetch(String.format("http://api.openweathermap.org/data/2.5/uvi?q=%s&appid=%s", ApplicationData.openWeatherMapLocationCity, ApplicationData.openWeatherMapKey));
+    public static UVIndexResponse getUVIndex(double lat, double lon) {
+        String response = httpFetch(String.format("http://api.openweathermap.org/data/2.5/uvi?lat=%s&lon=%s&appid=%s", lat, lon, ApplicationData.openWeatherMapKey));
         Gson gson = new Gson();
         return gson.fromJson(response, UVIndexResponse.class);
     }

@@ -28,11 +28,7 @@ public class DocsFacade {
     private static final JsonFactory JsonFactory = JacksonFactory.getDefaultInstance();
     private static final String TokensDirectory = "tokens";
 
-    // Google sample doc:
-    // https://docs.google.com/document/d/195j9eDD3ccgjQRttHhJPymLJUCOUjs-jmwTrekvdjFE/edit
-
     private static final List<String> Scopes = Collections.singletonList(DocsScopes.DOCUMENTS_READONLY);
-    private static final String CredentialsPath = "/confidential/credentials.json";
 
     /**
      * Creates an authorized Credential object.
@@ -41,15 +37,17 @@ public class DocsFacade {
      * @throws IOException If the credentials.json file cannot be found.
      */
     private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT) throws IOException {
-        // Load client secrets.
-        InputStream in = DocsFacade.class.getResourceAsStream(CredentialsPath);
+        // Load client secrets
+        InputStream in = DocsFacade.class.getResourceAsStream("/tvclockserver/credentials.json");
 
-        if (in == null)
-            throw new FileNotFoundException("Resource not found: " + CredentialsPath);
+        if (in == null) {
+            System.out.println("DocsFacade | Credentials Resource not found");
+            return null;
+        }
 
         GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JsonFactory, new InputStreamReader(in));
 
-        // Build flow and trigger user authorization request.
+        // Build flow and trigger user authorization request
         GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
                 HTTP_TRANSPORT, JsonFactory, clientSecrets, Scopes)
                 .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TokensDirectory)))
@@ -60,7 +58,7 @@ public class DocsFacade {
     }
 
     public static String fetchDoc() {
-        // Build a new authorized API client service.
+        // Build a new authorized API client service
         try {
             final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
             Docs service = new Docs.Builder(HTTP_TRANSPORT, JsonFactory, getCredentials(HTTP_TRANSPORT))
@@ -71,7 +69,8 @@ public class DocsFacade {
 
             List<StructuralElement> content = response.getBody().getContent();
             StringBuilder text = new StringBuilder();
-            //Iterate through the response to extract the text
+
+            // Iterate through the response to extract the text
             for (var structuralElement : content) {
                 if (structuralElement.getParagraph() == null) continue;
                 for (var element : structuralElement.getParagraph().getElements()) {

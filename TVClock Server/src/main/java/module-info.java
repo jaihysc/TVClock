@@ -19,4 +19,7 @@ module tvclockserver {
     exports tvclockserver.networking.models to gson;
     exports tvclockserver.taskList to gson;
     exports tvclockserver.scheduleList to gson;
+
+    exports tvclockserver.weather.models to gson;
+    opens tvclockserver.weather.models to gson;
 }

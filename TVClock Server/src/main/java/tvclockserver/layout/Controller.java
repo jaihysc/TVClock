@@ -221,12 +221,14 @@ public class Controller implements Initializable {
     private void updateWeather() {
         Timeline t = new Timeline(new KeyFrame(Duration.ZERO, e -> {
             ForecastResponse forecastResponse = OpenWeatherMapFacade.getForecastInfo();
-            updateUVIndex();
 
             if (forecastResponse == null) {
                 weatherDescription.setText("Unable to fetch weather information");
                 return;
             }
+
+            var coords = forecastResponse.getCity().getCoord();
+            updateUVIndex(coords.getLat(), coords.getLon());
 
             tvclockserver.weather.models.List response = forecastResponse.getList()[0];
 
@@ -265,8 +267,8 @@ public class Controller implements Initializable {
         t.play();
     }
 
-    private void updateUVIndex() {
-        UVIndexResponse response = OpenWeatherMapFacade.getUVIndex();
+    private void updateUVIndex(double lat, double lon) {
+        UVIndexResponse response = OpenWeatherMapFacade.getUVIndex(lat, lon);
         if (response == null)
             return;
 

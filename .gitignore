@@ -2,7 +2,7 @@
 out/
 node_modules/
 TVClock Server- Java.iml
-confidential/
+credentials.json
 .gradle/
 build/
 
