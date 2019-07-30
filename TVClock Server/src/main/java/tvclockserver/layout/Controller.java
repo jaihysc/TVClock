@@ -32,7 +32,9 @@ import java.util.regex.Pattern;
 
 
 public class Controller implements Initializable {
-    public Label timeLabel;
+    public Label timeLabelSmall;
+    public Label timeLabelLarge;
+
     public Label dateLabel;
     public Label amPmLabel;
 
@@ -139,10 +141,23 @@ public class Controller implements Initializable {
                 if (taskListSync.size() == 0) {
                     taskListSplitPane.setDividerPosition(0, 0);
                     collapseSchedulePreview();
+                    //Use the larger text as the tasklist is collapsed
+                    timeLabelLarge.setVisible(true);
+                    timeLabelLarge.setManaged(true);
+
+                    timeLabelSmall.setVisible(false);
+                    timeLabelSmall.setManaged(false);
+
                     return;
                 } else {
                     taskListSplitPane.setDividerPosition(0, 0.2);
                     expandSchedulePreview();
+                    //Use the smaller text as the tasklist is open
+                    timeLabelLarge.setVisible(false);
+                    timeLabelLarge.setManaged(false);
+
+                    timeLabelSmall.setVisible(true);
+                    timeLabelSmall.setManaged(true);
                 }
 
                 int wrapCharacter = (int) Math.round(taskListSplitPane.getDividerPositions()[0] * 100);
@@ -207,7 +222,8 @@ public class Controller implements Initializable {
      */
     private void updateTime() {
         Timeline clock = new Timeline(new KeyFrame(Duration.ZERO, e -> {
-            timeLabel.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("hh:mm:ss")));
+            timeLabelSmall.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("hh:mm:ss")));
+            timeLabelLarge.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("hh:mm:ss")));
 
             dateLabel.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy")));
 

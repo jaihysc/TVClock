@@ -13,8 +13,18 @@
 }
 
 /* Time info */
-#timeLabel {
+
+/* Modify -fx-font-size to change the size of the fonts when the taskList is open or collapsed*/
+#timeLabelSmall {
     -fx-font-size: 360;
+    -fx-padding: 0 0 0 0;
+    -fx-text-fill: white;
+    -fx-font-weight: bolder;
+    -fx-font-family: Arial, sans-serif;
+}
+
+#timeLabelLarge {
+    -fx-font-size: 420;
     -fx-padding: 0 0 0 0;
     -fx-text-fill: white;
     -fx-font-weight: bolder;

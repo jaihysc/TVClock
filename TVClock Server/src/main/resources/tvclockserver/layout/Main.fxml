@@ -23,7 +23,12 @@
                 <center>
                     <VBox alignment="CENTER" BorderPane.alignment="CENTER">
                         <HBox alignment="CENTER">
-                            <Label fx:id="timeLabel" id="timeLabel" text="9:00:50"/>
+                            <VBox>
+                                <Label fx:id="timeLabelSmall" text="9:00:50"/>
+                                <Label fx:id="timeLabelLarge" text="9:00:50"/>
+                            </VBox>
+
+
                             <VBox alignment="BOTTOM_CENTER">
                                 <Label fx:id="amPmLabel" id="amPmLabel" text="AM"/>
                             </VBox>
