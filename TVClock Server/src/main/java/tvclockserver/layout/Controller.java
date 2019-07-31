@@ -239,6 +239,7 @@ public class Controller implements Initializable {
 
             //Loads the hour chime and plays it on every hour
             if (lastHour != LocalDateTime.now().getHour()) {
+                mediaPlayer.stop(); //Stop to reset the file to the beginning before playing again
                 mediaPlayer.play();
                 lastHour = LocalDateTime.now().getHour();
             }
