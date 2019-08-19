@@ -137,8 +137,17 @@ public class Controller implements Initializable {
 
             //Synchronise since this runs in a thread
             synchronized (taskListSync) {
+                //Tasks that are active right now, those that are not scheduled for the future
+                List<TaskItem> currentTasks = new java.util.ArrayList<>();
+
+                for (var item : taskListSync) {
+                    //Add task if start date is greater than current date and end date is less than current date
+                    if (TaskListManager.isDateCurrent(item.startDate, item.endDate))
+                        currentTasks.add(item);
+                }
+
                 //Collapse the divider if there are no items
-                if (taskListSync.size() == 0) {
+                if (currentTasks.size() == 0) {
                     taskListSplitPane.setDividerPosition(0, 0);
                     collapseSchedulePreview();
                     //Use the larger text as the tasklist is collapsed
@@ -161,11 +170,8 @@ public class Controller implements Initializable {
                 }
 
                 int wrapCharacter = (int) Math.round(taskListSplitPane.getDividerPositions()[0] * 100);
-
-                for (var item : taskListSync) {
-                    //Add task if start date is greater than current date and end date is less than current date
-                    if (TaskListManager.isDateCurrent(item.startDate, item.endDate))
-                        taskList.getItems().add(TaskListManager.wrapText(item.text, wrapCharacter));
+                for (var item : currentTasks) {
+                    taskList.getItems().add(TaskListManager.wrapText(item.text, wrapCharacter));
                 }
             }
         }), new KeyFrame(Duration.seconds(10)));
@@ -233,6 +239,7 @@ public class Controller implements Initializable {
 
             //Loads the hour chime and plays it on every hour
             if (lastHour != LocalDateTime.now().getHour()) {
+                mediaPlayer.stop(); //Stop to reset the file to the beginning before playing again
                 mediaPlayer.play();
                 lastHour = LocalDateTime.now().getHour();
             }
