@@ -16,4 +16,9 @@ public class TaskItem {
      * Date which the task auto deletes
      */
     public Date endDate;
+
+    /**
+     * Greater than or equal to 0
+     */
+    public int priority;
 }

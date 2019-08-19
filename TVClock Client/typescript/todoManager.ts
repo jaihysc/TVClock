@@ -11,11 +11,13 @@ class Task {
     text = "";
     startDate = new Date();
     endDate = new Date();
+    priority: number;
 
-    constructor(text: string, startDate: Date, endDate: Date) {
+    constructor(text: string, startDate: Date, endDate: Date, priority: number) {
         this.text = text;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.priority = priority;
     }
 }
 
@@ -24,7 +26,7 @@ export class TodoViewManager implements IViewController {
     selectedTaskIndex = -1; //Index of current selected active task
     inEditMode = false; //Keep track of whether the edit button is in use or not
 
-    taskList!: JQuery<HTMLElement>;
+    taskListHtml!: JQuery<HTMLElement>;
 
     addButton!: JQuery<HTMLElement>;
     editButton!: JQuery<HTMLElement>;
@@ -33,6 +35,7 @@ export class TodoViewManager implements IViewController {
     newTaskText!: JQuery<HTMLElement>;
     newTaskStartDate!: JQuery<HTMLElement>;
     newTaskEndDate!: JQuery<HTMLElement>;
+    newTaskPriority!: JQuery<HTMLElement>;
     taskErrorText!: JQuery<HTMLElement>;
 
 
@@ -40,7 +43,7 @@ export class TodoViewManager implements IViewController {
     serverFetchIdentifier = "todo-view-fetchedFromServer";
 
     initialize(): void {
-        this.taskList = $("#active-tasks-list");
+        this.taskListHtml = $("#active-tasks-list");
 
         this.addButton = $("#add-task-btn");
         this.editButton = $("#edit-task-btn");
@@ -49,6 +52,7 @@ export class TodoViewManager implements IViewController {
         this.newTaskText = $("#new-task-text");
         this.newTaskStartDate = $("#new-task-start-date");
         this.newTaskEndDate = $("#new-task-end-date");
+        this.newTaskPriority = $("#new-task-priority");
         this.taskErrorText = $("#new-task-text-error");
     }
 
@@ -82,7 +86,9 @@ export class TodoViewManager implements IViewController {
             let startDate = String(this.newTaskStartDate.val());
             let endDate = String(this.newTaskEndDate.val());
 
-            let newTask = this.validateStartEndDate(taskText, {start: startDate, end: endDate});
+            let priority = Number(this.newTaskPriority.val());
+
+            let newTask = this.validateNewTask(taskText, {start: startDate, end: endDate}, priority);
             if (newTask == undefined)
                 return;
 
@@ -145,14 +151,14 @@ export class TodoViewManager implements IViewController {
         });
     }
 
-    private updateTasks(data: any[], sendServerPost: boolean) {
+    private updateTasks(data: Task[], sendServerPost: boolean) {
         this.taskListTasks = []; //Clear tasks first
         if (data != undefined) {
             for (let i = 0; i < data.length; ++i) {
                 if (data[i] == undefined)
                     continue;
                 //Reconvert date text into date
-                this.taskListTasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate)));
+                this.taskListTasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate), data[i].priority));
             }
         }
         //Updates the appearance of the task list with the new data
@@ -171,17 +177,44 @@ export class TodoViewManager implements IViewController {
 
     //Injects html into the list for elements to appear on screen, saves task data to persistent
     private updateTaskList(sendServerPost: boolean) {
-        this.taskList.html(""); //Clear old contents
+        this.taskListHtml.html(""); //Clear old contents
+
+        // todo something about this doesn't work
+        // Group by priority, then sort by task end date
+        let taskPriorityGroups: Task[][] = [];  // Priority corresponds to array index
+        for (let task of this.taskListTasks) {
+            // Initialize array if empty
+            if (!taskPriorityGroups[task.priority]) {
+                taskPriorityGroups[task.priority] = [];
+            }
+            taskPriorityGroups[task.priority].push(task);
+        }
+        // Sort by task end date in each priority array entry
+        for (let taskPriorityGroup of taskPriorityGroups) {
+            let length = taskPriorityGroup.length;
+            // Bubble sort for simplicity and the low number of items which will need to be sorted
+            for (let i = 0; i < length-1; i++)
+                for (let j = 0; j < length-i-1; j++)
+                    if (taskPriorityGroup[j] > taskPriorityGroup[j+1]) {
+                        let temp = taskPriorityGroup[j + 1];
+                        taskPriorityGroup[j + 1] = taskPriorityGroup[j];
+                        taskPriorityGroup[j] = temp;
+                    }
+        }
+        // Higher priorities show up first
+        taskPriorityGroups.reverse();
 
         //Inject each task into the html after sanitizing it
-        for (let i = 0; i < this.taskListTasks.length; ++i) {
-            let pTag = $("<p class='list-item-description'/>")
-                .text(this.taskListTasks[i].startDate + " - " + this.taskListTasks[i].endDate);
+        for (let taskPriorityGroup of taskPriorityGroups) {
+            for (let task of taskPriorityGroup) {
+                let pTag = $("<p class='list-item-description'/>")
+                    .text(task.startDate + " - " + task.endDate);
 
-            $("<li class='list-group-item-darker list-group-flush task-list-item'>")
-                .text(this.taskListTasks[i].text)
-                .append(pTag)
-                .appendTo(this.taskList);
+                $("<li class='list-group-item-darker list-group-flush task-list-item'>")
+                    .text(task.text)
+                    .append(pTag)
+                    .appendTo(this.taskListHtml);
+            }
         }
 
         //Create event handlers for each task so it can be set active
@@ -261,7 +294,8 @@ export class TodoViewManager implements IViewController {
         this.newTaskEndDate.attr("placeholder", TodoViewManager.toFullDateString(currentDate));
     }
 
-    private validateStartEndDate(taskText: string, dates: {start: String; end: String}) {
+    // Ensures that the task matches input requirements, dates are current, priority is greater than 0
+    private validateNewTask(taskText: string, dates: {start: String; end: String}, priority: number) {
         if (dates.start == "")
             dates.start = String(this.newTaskStartDate.attr("placeholder"));
         if (dates.end == "")
@@ -273,10 +307,14 @@ export class TodoViewManager implements IViewController {
         let currentDate = new Date();
         currentDate.setDate(currentDate.getDate()-1); //Allow a margin 1 day back
 
+        // Validate priority number
+        if (!priority || priority < 0)
+            return;
+
         //Make sure startDay is current and endDate is after startDate
         if (startDate >= currentDate && startDate < endDate) {
             //Creates a new task object with the user provided info
-            return new Task(taskText, new Date(startDate), new Date(endDate));
+            return new Task(taskText, new Date(startDate), new Date(endDate), priority);
         }
     }
 }
