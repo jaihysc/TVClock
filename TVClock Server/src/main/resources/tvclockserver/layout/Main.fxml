@@ -5,7 +5,7 @@
 <BorderPane fx:controller="tvclockserver.layout.Controller" id="BorderPane" xmlns:fx="http://javafx.com/fxml"
             style="-fx-background-color: black">
     <center>
-        <SplitPane fx:id="taskListSplitPane" dividerPositions="0.20" focusTraversable="true" prefHeight="600.0" prefWidth="200.0">
+        <SplitPane fx:id="mainSplitPane" dividerPositions="0.20" focusTraversable="true" prefHeight="600.0" prefWidth="200.0">
             <BorderPane style="-fx-background-color: black;">
                 <!--Task list-->
                 <center>

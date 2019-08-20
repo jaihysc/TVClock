@@ -5,6 +5,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -57,7 +58,10 @@ public class Controller implements Initializable {
     public Label forecastLabel4;
 
     public ListView<String> taskList;
-    public SplitPane taskListSplitPane;
+
+    public SplitPane mainSplitPane;
+    private Node taskListSplitPane;
+    private boolean taskListSplitPaneClosed;
 
     public ProgressBar dayProgressionBar;
     public Label scheduleBar;
@@ -128,6 +132,9 @@ public class Controller implements Initializable {
     private void initializeTaskList() {
         taskList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
+        taskListSplitPane = mainSplitPane.getItems().get(0);
+        taskListSplitPaneClosed = false;
+
         Timeline t = new Timeline(new KeyFrame(Duration.ZERO, e -> {
             //Trim off old taskItems
             TaskListManager.trimOldTasks();
@@ -146,9 +153,15 @@ public class Controller implements Initializable {
                         currentTasks.add(item);
                 }
 
-                //Collapse the divider if there are no items
+                //Collapse the divider if there are no items, and not already closed
                 if (currentTasks.size() == 0) {
-                    taskListSplitPane.setDividerPosition(0, 0);
+                    if (!taskListSplitPaneClosed) {
+                        taskListSplitPaneClosed = true;
+
+                        mainSplitPane.getItems().remove(taskListSplitPane);
+                        mainSplitPane.setDividerPosition(0, 0);
+                    }
+
                     collapseSchedulePreview();
                     //Use the larger text as the tasklist is collapsed
                     timeLabelLarge.setVisible(true);
@@ -159,7 +172,13 @@ public class Controller implements Initializable {
 
                     return;
                 } else {
-                    taskListSplitPane.setDividerPosition(0, 0.2);
+                    if (taskListSplitPaneClosed) {
+                        taskListSplitPaneClosed = false;
+
+                        mainSplitPane.getItems().add(0, taskListSplitPane);
+                        mainSplitPane.setDividerPosition(0, 0.2);
+                    }
+
                     expandSchedulePreview();
                     //Use the smaller text as the tasklist is open
                     timeLabelLarge.setVisible(false);
@@ -169,7 +188,7 @@ public class Controller implements Initializable {
                     timeLabelSmall.setManaged(true);
                 }
 
-                int wrapCharacter = (int) Math.round(taskListSplitPane.getDividerPositions()[0] * 100);
+                int wrapCharacter = (int) Math.round(mainSplitPane.getDividerPositions()[0] * 100);
                 for (var item : currentTasks) {
                     taskList.getItems().add(TaskListManager.wrapText(item.text, wrapCharacter));
                 }
@@ -318,6 +337,7 @@ public class Controller implements Initializable {
      * Moves the schedule preview from the task list inline with the current schedule
      */
     private void collapseSchedulePreview() {
+        scheduleBarPreviewInline.setVisible(true);
         scheduleBarPreviewInline.setManaged(true);
         scheduleBar.setPrefWidth(1920/2);
     }
@@ -325,6 +345,7 @@ public class Controller implements Initializable {
      * Pushes back schedule preview into the task list, expanding the bar for the current schedule
      */
     private void expandSchedulePreview() {
+        scheduleBarPreviewInline.setVisible(false);
         scheduleBarPreviewInline.setManaged(false);
         scheduleBar.setPrefWidth(1920);
     }
