@@ -87,6 +87,8 @@ export class TodoViewManager implements IViewController {
             let endDate = String(this.newTaskEndDate.val());
 
             let priority = Number(this.newTaskPriority.val());
+            if (!priority)
+                priority = Number(this.newTaskPriority.attr("placeholder"));  // Default priority to placeholder if user does not specify
 
             let newTask = this.validateNewTask(taskText, {start: startDate, end: endDate}, priority);
             if (newTask == undefined)
@@ -169,6 +171,7 @@ export class TodoViewManager implements IViewController {
         this.newTaskText.val("");
         this.newTaskStartDate.val("");
         this.newTaskEndDate.val("");
+        // this.newTaskPriority.val();  // Don't wipe priority
     }
 
     private static toFullDateString(date: Date) {
@@ -179,7 +182,7 @@ export class TodoViewManager implements IViewController {
     private updateTaskList(sendServerPost: boolean) {
         this.taskListHtml.html(""); //Clear old contents
 
-        // todo something about this doesn't work
+        // Sorting tasks by priority ------------------------------------------------
         // Group by priority, then sort by task end date
         let taskPriorityGroups: Task[][] = [];  // Priority corresponds to array index
         for (let task of this.taskListTasks) {
@@ -191,11 +194,14 @@ export class TodoViewManager implements IViewController {
         }
         // Sort by task end date in each priority array entry
         for (let taskPriorityGroup of taskPriorityGroups) {
+            if (taskPriorityGroup == undefined)
+                continue;
+
             let length = taskPriorityGroup.length;
             // Bubble sort for simplicity and the low number of items which will need to be sorted
             for (let i = 0; i < length-1; i++)
                 for (let j = 0; j < length-i-1; j++)
-                    if (taskPriorityGroup[j] > taskPriorityGroup[j+1]) {
+                    if (taskPriorityGroup[j].endDate > taskPriorityGroup[j+1].endDate) {
                         let temp = taskPriorityGroup[j + 1];
                         taskPriorityGroup[j + 1] = taskPriorityGroup[j];
                         taskPriorityGroup[j] = temp;
@@ -204,15 +210,39 @@ export class TodoViewManager implements IViewController {
         // Higher priorities show up first
         taskPriorityGroups.reverse();
 
-        //Inject each task into the html after sanitizing it
+        // Add back to this.taskListTasks
+        this.taskListTasks = [];
+            for (let taskPriorityGroup of taskPriorityGroups) {
+                if (taskPriorityGroup == undefined)
+                    continue;
+
+                for (let task of taskPriorityGroup) {
+                    this.taskListTasks.push(task);
+            }
+        }
+        console.log(this.taskListTasks);
+
+        // ------------------------------------------------
+        // Inject each task into the html after sanitizing it
         for (let taskPriorityGroup of taskPriorityGroups) {
+            if (taskPriorityGroup == undefined)
+                continue;
+
             for (let task of taskPriorityGroup) {
-                let pTag = $("<p class='list-item-description'/>")
+                let taskPriority = $("<span class='font-weight-bold lead'/>")
+                    .text(task.priority + "  ");
+                let taskName = $("<span/>")
+                    .text(task.text);
+                let div = $("<div/>")
+                    .append(taskPriority)
+                    .append(taskName);
+
+                let startEndDate = $("<p class='list-item-description'/>")
                     .text(task.startDate + " - " + task.endDate);
 
                 $("<li class='list-group-item-darker list-group-flush task-list-item'>")
-                    .text(task.text)
-                    .append(pTag)
+                    .append(div)
+                    .append(startEndDate)
                     .appendTo(this.taskListHtml);
             }
         }
@@ -280,9 +310,11 @@ export class TodoViewManager implements IViewController {
         this.removeButton.hide();
 
         //Load data from the selected task item into fields
-        this.newTaskText.val(this.taskListTasks[this.selectedTaskIndex].text);
-        this.newTaskStartDate.val(TodoViewManager.toFullDateString(this.taskListTasks[this.selectedTaskIndex].startDate));
-        this.newTaskEndDate.val(TodoViewManager.toFullDateString(this.taskListTasks[this.selectedTaskIndex].endDate));
+        let task = this.taskListTasks[this.selectedTaskIndex];
+        this.newTaskText.val(task.text);
+        this.newTaskStartDate.val(TodoViewManager.toFullDateString(task.startDate));
+        this.newTaskEndDate.val(TodoViewManager.toFullDateString(task.endDate));
+        this.newTaskPriority.val(task.priority);
     }
 
     private updatePlaceholderDates() {
@@ -308,8 +340,15 @@ export class TodoViewManager implements IViewController {
         currentDate.setDate(currentDate.getDate()-1); //Allow a margin 1 day back
 
         // Validate priority number
-        if (!priority || priority < 0)
+        if (priority < 0) {
+            this.taskErrorText.show();
+            this.taskErrorText.text("Priority must be greater than or equal to 0");
             return;
+        } else if (priority > 100000) {
+            this.taskErrorText.show();
+            this.taskErrorText.text("Priority must less than 100 000");
+            return;
+        }
 
         //Make sure startDay is current and endDate is after startDate
         if (startDate >= currentDate && startDate < endDate) {

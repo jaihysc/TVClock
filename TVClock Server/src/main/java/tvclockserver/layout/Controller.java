@@ -190,7 +190,11 @@ public class Controller implements Initializable {
 
                 int wrapCharacter = (int) Math.round(mainSplitPane.getDividerPositions()[0] * 100);
                 for (var item : currentTasks) {
-                    taskList.getItems().add(TaskListManager.wrapText(item.text, wrapCharacter));
+                    // Do not show priority number if it has priority 0
+                    if (item.priority > 0)
+                        taskList.getItems().add(TaskListManager.wrapText(item.text + " [" + item.priority + "]", wrapCharacter));
+                    else
+                        taskList.getItems().add(TaskListManager.wrapText(item.text, wrapCharacter));
                 }
             }
         }), new KeyFrame(Duration.seconds(10)));
