@@ -11,6 +11,8 @@ import {Connection} from "./Connection";
 //Class to serialize / deserialize responses to and from the server
 class NetworkingPacket {
     requestType: string | undefined;
+    isResponse: boolean = false;
+    isServer: boolean = false;
     data: string | undefined; //Data is stored as a json string
     dataIdentifiers: string[] | undefined;
     timestamp: number | undefined;
@@ -24,6 +26,24 @@ class NetworkingPacket {
         this.timestamp = timestamp;
         this.id = id;
         this.sendUpdate = sendPost;
+    }
+}
+
+
+enum ActionType {
+    Add = "Add", // Must use the enum string names when serializing to JSON or else the server can't deserialize it
+    Edit = "Edit",
+    Remove = "Remove"
+}
+class DataActionPacket {
+    actionType: ActionType;
+    hash: string;
+    data: string;
+
+    constructor(actionType: ActionType, hash: string, data: string) {
+        this.actionType = actionType;
+        this.hash = hash;
+        this.data = data;
     }
 }
 
@@ -44,6 +64,9 @@ export class NetworkManager {
 
     hostname: string = "";
     port: number = 0;
+
+    // Buffer to store outbound DataActionPackets
+    private dataActionPacketBuffer: DataActionPacket[] = [];  // Add to front, pop from back as the outbound DataActionPackets are sent
 
     readyCallback: () => void;
     dataCallback: (id: number, response: Buffer) => void;
@@ -72,24 +95,35 @@ export class NetworkManager {
             let returnedPacket: NetworkingPacket;
             try {
                 returnedPacket = JSON.parse(response.toString());
+                if (returnedPacket == undefined)
+                    return;
             } catch (e) {
                 console.log("Networking | Error handling received message: " + e);
                 return;
             }
 
-            //Handle update requests from the server
-            if (returnedPacket.requestType == RequestType.Update) {
-                if (returnedPacket.dataIdentifiers == undefined || returnedPacket.data == undefined)
-                    return;
-
-                let dataItems: any = JSON.parse(returnedPacket.data);
-                for (let i = 0; i < returnedPacket.dataIdentifiers.length; ++ i) {
-                    //Update requests will use the channel specified by dataIdentifiers with "-update" appended at the end
-                    //schedule-view-scheduleItems would become schedule-view-scheduleItems-update
-                    this.window.webContents.send(
-                        returnedPacket.dataIdentifiers[i] + StringTags.NetworkingUpdateEvent, dataItems);
+            //--------------------------------
+            // Handle server responses
+            if (returnedPacket.isServer) {
+                if (returnedPacket.isResponse) {
+                    // DataActionPacket
+                    this.dataActionPacketResponse(returnedPacket);
                 }
-                return;
+
+                //Handle update requests from the server
+                if (returnedPacket.requestType == RequestType.Update) {
+                    if (returnedPacket.dataIdentifiers == undefined || returnedPacket.data == undefined)
+                        return;
+
+                    let dataItems: any = JSON.parse(returnedPacket.data);
+                    for (let i = 0; i < returnedPacket.dataIdentifiers.length; ++ i) {
+                        //Update requests will use the channel specified by dataIdentifiers with "-update" appended at the end
+                        //schedule-view-scheduleItems would become schedule-view-scheduleItems-update
+                        this.window.webContents.send(
+                            returnedPacket.dataIdentifiers[i] + StringTags.NetworkingUpdateEvent, dataItems);
+                    }
+                    return;
+                }
             }
 
             let foundId = false;
@@ -223,5 +257,37 @@ export class NetworkManager {
 
         }, this.dataCallback, this.closeCallback, this.errorCallback);
         this.connect();
+    }
+
+    // Buffer methods
+
+    // Adds the dataActionPacket to the beginning of the buffer
+    dataActionPacketBufferAdd(dataActionPacket: DataActionPacket) {
+        // Possible pre-processing here?
+        this.dataActionPacketBuffer.unshift(dataActionPacket);
+    }
+
+    // Attempts to write out and flush the dataActionPacket buffer
+    dataActionPacketBufferFlush() {
+        for (let i = this.dataActionPacketBuffer.length - 1; i >= 0; --i) {
+            let str: string = JSON.stringify(this.dataActionPacketBuffer[i]);
+            this.connection.sendString(str, () => {
+                console.log("Networking |  DataActionPacketBuffer flushed: " + str);
+            });
+        }
+    }
+
+    // Handle server responses from flushing the dataActionPacketBuffer
+    // Removes packets which has been acknowledged with a response from the dataActionPacketBuffer
+    private dataActionPacketResponse(packet: NetworkingPacket) {
+        if (packet.data == undefined)
+            return;
+
+        let responseDataActionPacket: DataActionPacket = JSON.parse(packet.data);
+
+        for (let i = 0; i < this.dataActionPacketBuffer.length; ++i) {
+            if (this.dataActionPacketBuffer[i].hash == responseDataActionPacket.hash)
+                this.dataActionPacketBuffer.splice(i, 1);
+        }
     }
 }
