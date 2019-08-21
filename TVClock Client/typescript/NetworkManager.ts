@@ -30,20 +30,20 @@ class NetworkingPacket {
 }
 
 
-enum ActionType {
+export enum DataAction {
     Add = "Add", // Must use the enum string names when serializing to JSON or else the server can't deserialize it
     Edit = "Edit",
     Remove = "Remove"
 }
-class DataActionPacket {
-    actionType: ActionType;
+export class DataActionPacket {
+    dataAction: DataAction;
     hash: string;
-    data: string;
+    dataJson: string;
 
-    constructor(actionType: ActionType, hash: string, data: string) {
-        this.actionType = actionType;
+    constructor(dataAction: DataAction, hash: string, dataJson: string) {
+        this.dataAction = dataAction;
         this.hash = hash;
-        this.data = data;
+        this.dataJson = dataJson;
     }
 }
 

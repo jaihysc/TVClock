@@ -8,11 +8,7 @@ import tvclockserver.storage.ApplicationDataIdentifier;
 import tvclockserver.taskList.TaskItem;
 import tvclockserver.taskList.TaskListManager;
 
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * Performs the corresponding actions and sets the corresponding fields as specified by Packet
@@ -125,15 +121,17 @@ public class PacketHandler implements IMessageReceived {
     }
 
     private static void updateListData(String dataIdentifier, DataActionPacket packet) {
-        // Todo, convert the arrays to lists, they also need to deseriallize into a single scheduleItemGeneric, not an array
-
+        // Because the objects are stored as arrays instead of lists, they cannot be directly modified
+        // They will instead be converted to a list, operations will be performed on it
+        // The list will then be converted back into an array, and set
         switch (dataIdentifier) {
             case ApplicationDataIdentifier.taskItems:
-                dataActionDispatcher(
+                ApplicationData.taskItems = dataActionDispatcher(
                         packet.dataAction,
-                        Arrays.asList(ApplicationData.taskItems),
+                        ApplicationData.taskItems,
                         gson.fromJson(packet.dataJson, TaskItem.class)
-                );
+
+                ).toArray(new TaskItem[0]);
 
                 //Add taskItem name to a list to show up on screen
                 List<TaskItem> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);
@@ -144,19 +142,19 @@ public class PacketHandler implements IMessageReceived {
                 break;
 
             case ApplicationDataIdentifier.scheduleItems:
-                dataActionDispatcher(
+                ApplicationData.scheduleItems = dataActionDispatcher(
                         packet.dataAction,
-                        Arrays.asList(ApplicationData.scheduleItems),
+                        ApplicationData.scheduleItems,
                         gson.fromJson(packet.dataJson, ScheduleItemGeneric.class)
-                );
+                ).toArray(new ScheduleItemGeneric[0]);
                 break;
 
             case ApplicationDataIdentifier.periodItems:
-                dataActionDispatcher(
+                ApplicationData.periodItems = dataActionDispatcher(
                         packet.dataAction,
-                        Arrays.asList(ApplicationData.periodItems),
+                        ApplicationData.periodItems,
                         gson.fromJson(packet.dataJson, ScheduleItemGeneric.class)
-                );
+                ).toArray(new ScheduleItemGeneric[0]);
                 break;
         }
     }
@@ -166,10 +164,15 @@ public class PacketHandler implements IMessageReceived {
     /**
      * Dispatches the list and item to different methods depending on the DataAction
      * @param dataAction DataAction of packet
-     * @param list list in which the item will interact with
+     * @param array list in which the item will interact with
      * @param item object inheriting class DataActionItem
+     * @return List of DataActionItems, cast this into an array with .toArray(new T[0])
      */
-    private static void dataActionDispatcher(DataAction dataAction, List<DataActionItem> list, DataActionItem item) {
+    private static List<DataActionItem> dataActionDispatcher(DataAction dataAction, DataActionItem[] array, DataActionItem item) {
+        if (array == null)
+            array = new DataActionItem[] {};
+
+        List<DataActionItem> list = new ArrayList<>(Arrays.asList(array));
         switch (dataAction) {
             case Add:
                 dataActionAdd(list, item);
@@ -179,10 +182,12 @@ public class PacketHandler implements IMessageReceived {
                 dataActionEdit(list, item);
                 break;
 
-            case Delete:
+            case Remove:
                 dataActionDelete(list, item);
                 break;
         }
+
+        return list;
     }
 
     private static void dataActionAdd(List<DataActionItem> list, DataActionItem item) {
@@ -197,8 +202,7 @@ public class PacketHandler implements IMessageReceived {
     }
     private static void dataActionEdit(List<DataActionItem> list, DataActionItem item) {
         for (int i = 0; i < list.size(); ++i) {
-            DataActionItem listItem = list.get(i);
-            if (listItem.hash.equals(item.hash)) {
+            if (list.get(i).hash.equals(item.hash)) {
                 list.set(i, item);
                 break;
             }
@@ -206,8 +210,7 @@ public class PacketHandler implements IMessageReceived {
     }
     private static void dataActionDelete(List<DataActionItem> list, DataActionItem item) {
         for (int i = 0; i < list.size(); ++i) {
-            DataActionItem listItem = list.get(i);
-            if (listItem.hash.equals(item.hash)) {
+            if (list.get(i).hash.equals(item.hash)) {
                 list.remove(i);
                 break;
             }

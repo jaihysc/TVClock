@@ -1,6 +1,7 @@
 import {app, BrowserWindow, ipcMain} from "electron";
 import {NetworkManager} from "./NetworkManager";
 import {NetworkingStatus, NetworkOperation, RequestType} from "./RequestTypes";
+import {NetworkingFunctions} from "./NetworkingFunctions";
 
 let mainWindow: BrowserWindow;
 
