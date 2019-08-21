@@ -1,6 +1,8 @@
 package tvclockserver.scheduleList;
 
-public class ScheduleItemGeneric {
+import tvclockserver.networking.models.DataActionItem;
+
+public class ScheduleItemGeneric extends DataActionItem {
     public String periodName;
     public String hour;
     /**
