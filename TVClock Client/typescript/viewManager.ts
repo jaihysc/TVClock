@@ -1,9 +1,9 @@
 //Renderer
 //Manages the switching between the different views
 
-import {TodoViewManager} from "./todoManager";
-import {ScheduleViewManager} from "./scheduleManager";
-import {SettingViewManager} from "./settingManager";
+import {TodoViewManager} from "./view-scripts/tasks";
+import {ScheduleViewManager} from "./view-scripts/schedule";
+import {SettingViewManager} from "./view-scripts/settings";
 import {CssClasses} from "./ViewCommon";
 
 export interface IViewController {

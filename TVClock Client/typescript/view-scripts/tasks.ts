@@ -2,11 +2,11 @@
 //Manager for tasks view
 
 import {ipcRenderer} from "electron";
-import {LocalStorageOperation, NetworkOperation, RequestType} from "./RequestTypes";
-import {IViewController} from "./viewManager";
-import {StringTags, ViewCommon} from "./ViewCommon";
-import {DataActionItem, NetworkingFunctions} from "./NetworkingFunctions";
-import {DataAction} from "./NetworkManager";
+import {LocalStorageOperation, NetworkOperation, RequestType} from "../RequestTypes";
+import {IViewController} from "../viewManager";
+import {StringTags, ViewCommon} from "../ViewCommon";
+import {DataActionItem, NetworkingFunctions} from "../NetworkingFunctions";
+import {DataAction} from "../NetworkManager";
 
 //A task in the task list
 class Task implements DataActionItem{

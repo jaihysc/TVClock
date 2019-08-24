@@ -2,9 +2,9 @@
 //Manager for settings view
 
 import { ipcRenderer } from "electron";
-import {NetworkOperation, RequestType} from "./RequestTypes";
-import {IViewController} from "./viewManager";
-import {StringTags} from "./ViewCommon";
+import {NetworkOperation, RequestType} from "../RequestTypes";
+import {IViewController} from "../viewManager";
+import {StringTags} from "../ViewCommon";
 
 export class SettingViewManager implements IViewController {
     networkingHostname!: JQuery<HTMLElement>;
