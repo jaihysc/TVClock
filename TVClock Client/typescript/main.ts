@@ -1,5 +1,5 @@
 import {app, BrowserWindow, ipcMain} from "electron";
-import {NetworkManager} from "./NetworkManager";
+import {DataActionPacket, NetworkManager} from "./NetworkManager";
 import {NetworkingStatus, NetworkOperation, RequestType} from "./RequestTypes";
 import {NetworkingFunctions} from "./NetworkingFunctions";
 
@@ -41,6 +41,10 @@ async function createWindow() {
     //Sends specified identifiers with RequestType and returns the response
     ipcMain.on(NetworkOperation.Send, (event: any, args: { requestType: RequestType; identifiers: any[]; data: any[]; sendUpdate: boolean}) => {
         networkManager.send(event, args.requestType, args.identifiers, args.data, args.sendUpdate);
+    });
+
+    ipcMain.on(NetworkOperation.DataActionPacketBufferAdd, (event: any, args: { dataActionPacket: DataActionPacket }) => {
+       networkManager.dataActionPacketBufferAdd(args.dataActionPacket);
     });
 
     //Allow for changing of port + hostname

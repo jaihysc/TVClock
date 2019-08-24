@@ -27,9 +27,16 @@ public class PacketHandler implements IMessageReceived {
             case Post: //POST request from client
                 updateData(receivedPacket.data, receivedPacket.dataIdentifiers);
 
-                // Forward post contents via UPDATE out to all clients excluding the one which sent the post request
+                // Send reply to packet sender acknowledging reception of packet
+                sendResponsePacket(receivedPacket, connection);
+
+                // Forward post contents via UPDATE out to all clients INCLUDING the one which sent the post request
+                // This is done for offline networking, so when the client's data gets overridden with server data
+                // The clients DataActionPackets are flushed, causing contents on the server to update, and the client will see the
+                // New data it created itself
                 if (receivedPacket.sendUpdate)
-                    sendUpdateRequest(receivedPacket.data, receivedPacket.dataIdentifiers, new Connection[] {connection});
+//                   sendUpdateRequest(receivedPacket.data, receivedPacket.dataIdentifiers, new Connection[] {connection});
+                    sendUpdateRequest(receivedPacket.data, receivedPacket.dataIdentifiers, null);
                 break;
 
             case Get: //GET request from client
@@ -70,6 +77,13 @@ public class PacketHandler implements IMessageReceived {
             ConnectionManager.sendMessage(gson.toJson(updatePacket, Packet.class), excludedConnections);
     }
 
+    private static void sendResponsePacket(Packet packet, Connection connection) {
+        packet.isResponse = true;
+        packet.isServer = true;
+
+        connection.sendMessage(gson.toJson(packet));
+    }
+
     /**
      * Fetches data stored by the identifier
      * @param identifier Identifier of data to access
@@ -96,6 +110,8 @@ public class PacketHandler implements IMessageReceived {
      * @param identifiers Target data identifiers
      */
     private static void updateData(String json, String[] identifiers) {
+        // Todo, convert data to a string array instead for efficiency, thus I do not need to deserialize the entire array each iteration
+
         int i = 0;
         //Json can be deserialized into string array, and assigned to identifiers in this loop
         for (String identifier : identifiers) {

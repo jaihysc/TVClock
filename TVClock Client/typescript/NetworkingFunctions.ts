@@ -9,17 +9,14 @@ export interface DataActionItem {
 
 export class NetworkingFunctions {
     // Sends a packet containing a DataActionPacket to modify lists
-    static sendDataActionPacket(actionType: DataAction, hash: string, taskIdentifiers: string[], data: any): void {
+    static sendDataActionPacket(actionType: DataAction, dataIdentifier: string, hash: string, data: any): void {
         let dataJSON =  JSON.stringify(data);
-        let dataActionPacket = new DataActionPacket(actionType, hash, dataJSON);
+        let dataActionPacket = new DataActionPacket(actionType, dataIdentifier, hash, dataJSON);
 
-        // todo, this needs to send into the buffer
         ipcRenderer.send(
-            NetworkOperation.Send,
+            NetworkOperation.DataActionPacketBufferAdd,
             {
-                requestType: RequestType.Post,
-                identifiers: taskIdentifiers,
-                data: [dataActionPacket]  // Do not convert this to JSON, it is done in NetworkManager
+                dataActionPacket: dataActionPacket
             }
         );
     }

@@ -106,8 +106,8 @@ export class TodoViewManager implements IViewController {
                 // Override task on server
                 NetworkingFunctions.sendDataActionPacket(
                     DataAction.Edit,
+                    this.tasksIdentifier,
                     newTask.hash,
-                    [this.tasksIdentifier],
                     newTask
                 );
                 this.editButton.trigger("click"); //Exit edit mode by clicking the edit button
@@ -118,8 +118,8 @@ export class TodoViewManager implements IViewController {
                 // Add newly created task to server
                 NetworkingFunctions.sendDataActionPacket(
                     DataAction.Add,
+                    this.tasksIdentifier,
                     newTask.hash,
-                    [this.tasksIdentifier],
                     newTask
                 );
             }
@@ -141,8 +141,8 @@ export class TodoViewManager implements IViewController {
             let task = this.taskListTasks[this.selectedTaskIndex];
             NetworkingFunctions.sendDataActionPacket(
                 DataAction.Remove,
+                this.tasksIdentifier,
                 task.hash,
-                [this.tasksIdentifier],
                 task
             );
 
@@ -305,9 +305,6 @@ export class TodoViewManager implements IViewController {
 
         //Save task data to local storage
         ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.tasksIdentifier, data: this.taskListTasks});
-
-        // Todo, this function here can no longer sent a POST to servers, call the function in NetworkingFunctions
-        // for add, edit, remove
     }
 
     //Shows/Hides the edit + remove buttons

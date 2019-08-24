@@ -1,10 +1,9 @@
 //Main
 
 import {NetworkingStatus, NetworkOperation, RequestType} from "./RequestTypes";
-import {Socket} from "net";
-import BrowserWindow = Electron.BrowserWindow;
 import {StringTags} from "./ViewCommon";
 import {Connection} from "./Connection";
+import BrowserWindow = Electron.BrowserWindow;
 
 //Handles communication between the client and server
 
@@ -17,15 +16,15 @@ class NetworkingPacket {
     dataIdentifiers: string[] | undefined;
     timestamp: number | undefined;
     id: number; //Used for identifying the response, which will be on the same id
-    sendUpdate: boolean; //Whether or not the server should send a post upon receiving a get request
+    sendUpdate: boolean; //Whether or not the server should send a update request to other connect clients
 
-    constructor(requestType: RequestType, data: string, dataIdentifiers: string[], timestamp: number, id: number, sendPost: boolean = true) {
+    constructor(requestType: RequestType, data: string, dataIdentifiers: string[], timestamp: number, id: number, sendUpdate: boolean = true) {
         this.requestType = requestType;
         this.data = data;
         this.dataIdentifiers = dataIdentifiers;
         this.timestamp = timestamp;
         this.id = id;
-        this.sendUpdate = sendPost;
+        this.sendUpdate = sendUpdate;
     }
 }
 
@@ -37,11 +36,13 @@ export enum DataAction {
 }
 export class DataActionPacket {
     dataAction: DataAction;
+    dataIdentifier: string;
     hash: string;
     dataJson: string;
 
-    constructor(dataAction: DataAction, hash: string, dataJson: string) {
+    constructor(dataAction: DataAction, dataIdentifier: string, hash: string, dataJson: string) {
         this.dataAction = dataAction;
+        this.dataIdentifier = dataIdentifier;
         this.hash = hash;
         this.dataJson = dataJson;
     }
@@ -106,8 +107,18 @@ export class NetworkManager {
             // Handle server responses
             if (returnedPacket.isServer) {
                 if (returnedPacket.isResponse) {
-                    // DataActionPacket
-                    this.dataActionPacketResponse(returnedPacket);
+                    switch (returnedPacket.requestType) {
+                        case RequestType.Get:
+                            break;
+
+                        case RequestType.Post:
+                            this.dataActionPacketResponse(returnedPacket);
+                            break;
+
+                        case RequestType.Update:
+                            break;
+
+                    }
                 }
 
                 //Handle update requests from the server
@@ -140,7 +151,7 @@ export class NetworkManager {
                 }
             }
 
-            if (!foundId)
+            if (!foundId && returnedPacket.id != -1)
                 console.log("Networking | Received packet with no matching id - Ignoring");
         };
         this.closeCallback = (id: number) => {
@@ -222,6 +233,9 @@ export class NetworkManager {
 
             this.window.webContents.send(NetworkingStatus.SetStatus, "connected");
 
+            // Flush away DataActionBuffer using the connection
+            this.dataActionPacketBufferFlush();
+
             //Sets the visible connected address display. e.g 127.0.0.1:4999
             this.window.webContents.send(NetworkOperation.SetDisplayAddress,{
                 hostname: this.hostname,
@@ -262,32 +276,54 @@ export class NetworkManager {
     // Buffer methods
 
     // Adds the dataActionPacket to the beginning of the buffer
-    dataActionPacketBufferAdd(dataActionPacket: DataActionPacket) {
+    dataActionPacketBufferAdd(dataActionPacket: DataActionPacket): void {
         // Possible pre-processing here?
         this.dataActionPacketBuffer.unshift(dataActionPacket);
+
+        this.dataActionPacketBufferFlush();
+
+        console.log("DataActionPacket has been inserted. Hash:" + dataActionPacket.hash);
     }
 
     // Attempts to write out and flush the dataActionPacket buffer
-    dataActionPacketBufferFlush() {
-        for (let i = this.dataActionPacketBuffer.length - 1; i >= 0; --i) {
-            let str: string = JSON.stringify(this.dataActionPacketBuffer[i]);
-            this.connection.sendString(str, () => {
-                console.log("Networking |  DataActionPacketBuffer flushed: " + str);
-            });
+    dataActionPacketBufferFlush(): void {
+        if (!this.networkConnected)
+            return;
+
+        // Send together in one packet for EFFICIENCY!
+        let dataStr: string = JSON.stringify(this.dataActionPacketBuffer);  // TOdo, I will make it sent the array instead, I promise
+        let dataIdentifiers: string[] = [];
+
+        for (let dataActionPacket of this.dataActionPacketBuffer) {
+            dataIdentifiers.push(dataActionPacket.dataIdentifier);
         }
+
+        let packet = new NetworkingPacket(RequestType.Post, dataStr, dataIdentifiers, Date.now(), -1, false);
+
+        let packetString = JSON.stringify(packet);
+        this.connection.sendString(packetString, () => {
+            console.log("Networking | DataActionPacketBuffer sent: " + packetString);
+            console.log("Networking | DataActionPacketBuffer flushed");
+        });
     }
 
     // Handle server responses from flushing the dataActionPacketBuffer
-    // Removes packets which has been acknowledged with a response from the dataActionPacketBuffer
-    private dataActionPacketResponse(packet: NetworkingPacket) {
+    // Removes packets from the dataActionPacketBuffer which has been acknowledged with a server response
+    private dataActionPacketResponse(packet: NetworkingPacket): void {
         if (packet.data == undefined)
             return;
 
-        let responseDataActionPacket: DataActionPacket = JSON.parse(packet.data);
+        let responseDataActionPacket: DataActionPacket[] = JSON.parse(packet.data);
+
+        // If returned packet was not a DataActionPacket
+        if (!responseDataActionPacket)
+            return;
 
         for (let i = 0; i < this.dataActionPacketBuffer.length; ++i) {
-            if (this.dataActionPacketBuffer[i].hash == responseDataActionPacket.hash)
-                this.dataActionPacketBuffer.splice(i, 1);
+            for (let j = 0; j < responseDataActionPacket.length; ++j) {
+                if (this.dataActionPacketBuffer[i].hash == responseDataActionPacket[j].hash)
+                    this.dataActionPacketBuffer.splice(i, 1);
+            }
         }
     }
 }

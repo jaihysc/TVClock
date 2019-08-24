@@ -2,8 +2,8 @@ package tvclockserver.networking.models;
 
 public class Packet {
     public RequestType requestType;
-    boolean isResponse;         // Is this DataActionPacket a response to one sent by the client?
-    boolean isServer;           // Always true since this is the server side
+    public boolean isResponse;         // Is this DataActionPacket a response to one sent by the client?
+    public boolean isServer;           // Always true since this is the server side
     public String data; //Serialized json string
     public String[] dataIdentifiers;
     public long timestamp;
