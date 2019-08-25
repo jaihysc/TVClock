@@ -73,7 +73,16 @@ export class TodoViewManager implements IViewController {
 
         //Networking Update request handler
         ipcRenderer.on(this.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
-            DataActionFunctions.handleDataActionPacket(dataActionPackets, this.taskListTasks);
+            let task: Task | undefined = DataActionFunctions.handleDataActionPacket(dataActionPackets, this.taskListTasks) as Task;
+            if (task != undefined) {
+                task.startDate = new Date(task.startDate);
+                task.endDate = new Date(task.endDate);
+            }
+
+            // Decrement selectedTaskIndex if deleted item was the last element in array
+            if (this.selectedTaskIndex >= this.taskListTasks.length)
+                this.selectedTaskIndex--;
+
             this.updateTaskList();
         });
 
@@ -215,6 +224,7 @@ export class TodoViewManager implements IViewController {
     private updateTaskList() {
         this.taskListHtml.html(""); //Clear old contents
 
+        // Copy of server's task sorting
         // Sorting tasks by priority ------------------------------------------------
         // Group by priority, then sort by task end date
         let taskPriorityGroups: Task[][] = [];  // Priority corresponds to array index
@@ -245,12 +255,12 @@ export class TodoViewManager implements IViewController {
 
         // Add back to this.taskListTasks
         this.taskListTasks = [];
-            for (let taskPriorityGroup of taskPriorityGroups) {
-                if (taskPriorityGroup == undefined)
-                    continue;
+        for (let taskPriorityGroup of taskPriorityGroups) {
+            if (taskPriorityGroup == undefined)
+                continue;
 
-                for (let task of taskPriorityGroup) {
-                    this.taskListTasks.push(task);
+            for (let task of taskPriorityGroup) {
+                this.taskListTasks.push(task);
             }
         }
 

@@ -3,54 +3,61 @@ import {DataAction, DataActionPacket} from "./NetworkManager";
 
 export class DataActionFunctions {
     // Dispatches DataActionsPackets to make their appropriate modifications to the targetArray
-    public static handleDataActionPacket(dataActionPackets: DataActionPacket[], targetArray: DataActionItem[]): void {
-        // Todo, date is not parsed correctly
+    // Returns the item inheriting the DataActionItem class which was modified, undefined if nothing was modified
+    public static handleDataActionPacket(dataActionPackets: DataActionPacket[], targetArray: DataActionItem[]): DataActionItem | undefined {
         for (let dataActionPacket of dataActionPackets) {
             let data = JSON.parse(dataActionPacket.dataJson);
 
             switch (dataActionPacket.dataAction) {
                 case DataAction.Add:
-                    this.add(targetArray, data);
+                    return this.add(targetArray, data);
                     break;
 
                 case DataAction.Edit:
-                    this.edit(targetArray, data);
+                    return this.edit(targetArray, data);
                     break;
 
                 case DataAction.Remove:
-                    this.remove(targetArray, data);
+                    return this.remove(targetArray, data);
                     break;
             }
         }
+
+        return undefined;
     }
 
     // These are copies of the methods on the server side
-    private static add(targetArray: DataActionItem[], item: DataActionItem): void {
+    private static add(targetArray: DataActionItem[], item: DataActionItem): DataActionItem | undefined {
         // Do not add if item with same hash already exists
         for (let i = 0; i < targetArray.length; ++i) {
             if (targetArray[i].hash == item.hash) {
-                return;
+                return undefined;
             }
         }
 
         targetArray.push(item);
+        return item;
     }
 
-    private static edit(targetArray: DataActionItem[], item: DataActionItem): void {
+    private static edit(targetArray: DataActionItem[], item: DataActionItem): DataActionItem | undefined {
         for (let i = 0; i < targetArray.length; ++i) {
             if (targetArray[i].hash == item.hash) {
                 targetArray[i] = item;
-                break;
+                return item;
             }
         }
+
+        return undefined;
     }
 
-    private static remove(targetArray: DataActionItem[], item: DataActionItem): void {
+    private static remove(targetArray: DataActionItem[], item: DataActionItem): DataActionItem | undefined {
         for (let i = 0; i < targetArray.length; ++i) {
             if (targetArray[i].hash == item.hash) {
                 targetArray.splice(i, 1);
-                break;
+                return item;
             }
         }
+
+        return undefined;
     }
 }

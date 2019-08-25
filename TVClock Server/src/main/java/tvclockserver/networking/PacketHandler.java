@@ -142,12 +142,54 @@ public class PacketHandler implements IMessageReceived {
         // The list will then be converted back into an array, and set
         switch (dataIdentifier) {
             case ApplicationDataIdentifier.taskItems:
-                ApplicationData.taskItems = dataActionDispatcher(
+                TaskItem[] taskItems = dataActionDispatcher(
                         packet.dataAction,
                         ApplicationData.taskItems,
                         gson.fromJson(packet.dataJson, TaskItem.class)
 
                 ).toArray(new TaskItem[0]);
+
+                // Group by priority, then sort by task end date
+                ArrayList<ArrayList<TaskItem>> taskPriorityGroups = new ArrayList<>();  // Priority corresponds to array index
+                for (TaskItem task : taskItems) {
+                    // Initialize array if empty
+                    if (task.priority >= taskPriorityGroups.size()) {
+                        // Pad out unused indexes with null
+                        while (task.priority > taskPriorityGroups.size())
+                            taskPriorityGroups.add(null);
+                        taskPriorityGroups.add(task.priority, new ArrayList<>());
+                    } else if (taskPriorityGroups.get(task.priority) == null)
+                        taskPriorityGroups.set(task.priority, new ArrayList<>());
+
+                    taskPriorityGroups.get(task.priority).add(task);
+                }
+                // Sort by task end date in each priority array entry
+                for (var taskPriorityGroup : taskPriorityGroups) {
+                    if (taskPriorityGroup == null)
+                        continue;
+
+                    int size = taskPriorityGroup.size();
+                    // Bubble sort for simplicity and the low number of items which will need to be sorted
+                    for (int i = 0; i < size-1; i++)
+                        for (int j = 0; j < size-i-1; j++)
+                            if (taskPriorityGroup.get(j).endDate.after(taskPriorityGroup.get(j+1).endDate)) {
+                                TaskItem temp = taskPriorityGroup.get(j + 1);
+                                taskPriorityGroup.set(j + 1, taskPriorityGroup.get(j));
+                                taskPriorityGroup.set(j, temp);
+                            }
+                }
+                // Higher priorities show up first
+                Collections.reverse(taskPriorityGroups);
+
+                // Step through and collect sorted TaskItems back into an array of taskItems
+                ArrayList<TaskItem> taskItemsSorted = new ArrayList<>();
+                for (var taskPriorityGroup : taskPriorityGroups) {
+                    if (taskPriorityGroup == null)
+                        continue;
+                    taskItemsSorted.addAll(taskPriorityGroup);
+                }
+
+                ApplicationData.taskItems = taskItemsSorted.toArray(new TaskItem[0]);
 
                 //Add taskItem name to a list to show up on screen
                 List<TaskItem> taskListSync = Collections.synchronizedList(TaskListManager.taskListItems);

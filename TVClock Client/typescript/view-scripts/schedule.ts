@@ -77,6 +77,11 @@ export class ScheduleViewManager implements IViewController {
         });
         ipcRenderer.on(this.periodItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
             DataActionFunctions.handleDataActionPacket(dataActionPackets, this.periodItems);
+
+            // Decrement selectedPeriodItemIndex if deleted item was the last element in array
+            if (this.selectedPeriodItemIndex >= this.periodItems.length)
+                this.selectedPeriodItemIndex--;
+
             this.refreshPeriodList();
         });
 
@@ -399,11 +404,12 @@ export class ScheduleViewManager implements IViewController {
                         this.scheduleItems[this.selectedScheduleItemIndex].periodName = this.periodItems[this.selectedPeriodItemIndex].periodName;
                         this.scheduleItems[this.selectedScheduleItemIndex].color = this.periodItems[this.selectedPeriodItemIndex].color;
 
+                        // Send edits to the period of a scheduleItem
                         NetworkingFunctions.sendDataActionPacket(
                             DataAction.Edit,
                             this.scheduleItemsIdentifier,
-                            this.scheduleItems[this.selectedPeriodItemIndex].hash,
-                            this.scheduleItems[this.selectedPeriodItemIndex]
+                            this.scheduleItems[this.selectedScheduleItemIndex].hash,
+                            this.scheduleItems[this.selectedScheduleItemIndex]
                         );
 
                         //Refresh for text changes to the schedule list to show up
