@@ -16,6 +16,7 @@ import javafx.scene.paint.Color;
 import javafx.util.Duration;
 import tvclockserver.docs.DocsFacade;
 import tvclockserver.networking.SettingMenu;
+import tvclockserver.scheduleList.ScheduleItemGeneric;
 import tvclockserver.storage.ApplicationData;
 import tvclockserver.taskList.TaskItem;
 import tvclockserver.taskList.TaskListManager;
@@ -95,6 +96,30 @@ public class Controller implements Initializable {
     }
 
     private void initializeScheduleBar() {
+        // Initialize schedule bar to default value for all 24 hours
+        // Default value: None
+        String defaultPeriodColor = "464646";
+        String defaultPeriodName = "None";
+
+        ScheduleItemGeneric[] scheduleItems = new ScheduleItemGeneric[24];
+        ScheduleItemGeneric[] periodItems = new ScheduleItemGeneric[1];
+
+        scheduleItems[0] = new ScheduleItemGeneric(defaultPeriodName, "12 PM", defaultPeriodColor, "0");
+        // AM
+        for (int i = 1; i <= 12; ++i) {
+            scheduleItems[i] = new ScheduleItemGeneric(defaultPeriodName, i + " AM", defaultPeriodColor, Integer.toString(i));
+        }
+        // PM
+        for (int i = 1; i <= 11; ++i) {
+            scheduleItems[i + 12] = new ScheduleItemGeneric(defaultPeriodName, i + " PM", defaultPeriodColor, Integer.toString(12 + i));
+        }
+
+        // Default period does not have a hash since it cannot be modified
+        periodItems[0] = new ScheduleItemGeneric(defaultPeriodName, null, defaultPeriodColor, "");
+
+        ApplicationData.scheduleItems = scheduleItems;
+        ApplicationData.periodItems = periodItems;
+
         Timeline t = new Timeline(new KeyFrame(Duration.ZERO, e -> {
             //Match current hour to scheduleItem belonging to that hour
             int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);

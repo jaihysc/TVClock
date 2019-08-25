@@ -6,7 +6,8 @@ import {LocalStorageOperation, NetworkOperation, RequestType} from "../RequestTy
 import {IViewController} from "../viewManager";
 import {StringTags, ViewCommon} from "../ViewCommon";
 import {DataActionItem, NetworkingFunctions} from "../NetworkingFunctions";
-import {DataAction} from "../NetworkManager";
+import {DataAction, DataActionPacket} from "../NetworkManager";
+import {DataActionFunctions} from "../DataActionFunctions";
 
 //A task in the task list
 class Task implements DataActionItem{
@@ -71,8 +72,9 @@ export class TodoViewManager implements IViewController {
         });
 
         //Networking Update request handler
-        ipcRenderer.on(this.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, data: any[]) => {
-            this.updateTasks(data);
+        ipcRenderer.on(this.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
+            DataActionFunctions.handleDataActionPacket(dataActionPackets, this.taskListTasks);
+            this.updateTaskList();
         });
 
         //Adds a new task to the task list
@@ -251,7 +253,6 @@ export class TodoViewManager implements IViewController {
                     this.taskListTasks.push(task);
             }
         }
-        console.log(this.taskListTasks);
 
         // ------------------------------------------------
         // Inject each task into the html after sanitizing it
