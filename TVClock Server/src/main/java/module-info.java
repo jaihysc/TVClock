@@ -23,4 +23,6 @@ module tvclockserver {
 
     exports tvclockserver.weather.models to gson;
     opens tvclockserver.weather.models to gson;
+
+    opens tvclockserver.networking.models to gson;
 }

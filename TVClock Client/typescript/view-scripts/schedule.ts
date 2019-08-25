@@ -3,9 +3,9 @@
 
 import { ipcRenderer } from "electron";
 import invert from "invert-color";
-import {RequestType, NetworkOperation, LocalStorageOperation} from "./RequestTypes";
-import {IViewController} from "./viewManager";
-import {StringTags, ViewCommon} from "./ViewCommon";
+import {RequestType, NetworkOperation, LocalStorageOperation} from "../RequestTypes";
+import {IViewController} from "../viewManager";
+import {StringTags, ViewCommon} from "../ViewCommon";
 
 class ScheduleItemGeneric {
     periodName: string;

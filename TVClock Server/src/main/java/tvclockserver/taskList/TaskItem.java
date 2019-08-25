@@ -1,8 +1,10 @@
 package tvclockserver.taskList;
 
+import tvclockserver.networking.models.DataActionItem;
+
 import java.util.Date;
 
-public class TaskItem {
+public class TaskItem extends DataActionItem {
     public String text;
     /**
      * Currently not supported

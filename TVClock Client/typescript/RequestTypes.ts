@@ -16,7 +16,8 @@ export enum NetworkOperation {
     Send = "networking-send",
     Reconnect = "networking-reconnect",
     ConfigModify = "networking-info-modify",
-    SetDisplayAddress = "networking-display-address"
+    SetDisplayAddress = "networking-display-address",
+    DataActionPacketBufferAdd = "networking-DataActionPacketBufferAdd"
 
 }
 

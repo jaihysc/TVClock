@@ -2,7 +2,7 @@ package tvclockserver.taskList;
 
 import tvclockserver.networking.PacketHandler;
 import tvclockserver.storage.ApplicationData;
-import tvclockserver.storage.ApplicationDataIdentifiers;
+import tvclockserver.storage.ApplicationDataIdentifier;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -95,7 +95,7 @@ public class TaskListManager {
         }
 
         if (tasksTrimmed) {
-            PacketHandler.sendItemUpdateRequest(ApplicationDataIdentifiers.taskItems);
+            PacketHandler.sendItemUpdateRequest(ApplicationDataIdentifier.taskItems);
         }
     }
 
