@@ -319,17 +319,16 @@ export class NetworkManager {
     // Handle server responses from flushing the dataActionPacketBuffer
     // Removes packets from the dataActionPacketBuffer which has been acknowledged with a server response
     private dataActionPacketResponse(packet: NetworkingPacket): void {
-        if (packet.data == undefined)
+        if (packet.data == undefined || packet.requestType != RequestType.Post)
             return;
 
         let responseDataActionPacket: DataActionPacket[] = JSON.parse(packet.data);
 
-        // If returned packet was not a DataActionPacket
-        if (!responseDataActionPacket)
+        if (!responseDataActionPacket)  // If returned packet was not a DataActionPacket
             return;
 
-        for (let i = 0; i < this.dataActionPacketBuffer.length; ++i) {
-            for (let j = 0; j < responseDataActionPacket.length; ++j) {
+        for (let j = 0; j < responseDataActionPacket.length; ++j) {
+            for (let i = this.dataActionPacketBuffer.length - 1; i >= 0; --i) {
                 if (this.dataActionPacketBuffer[i].hash == responseDataActionPacket[j].hash)
                     this.dataActionPacketBuffer.splice(i, 1);
             }

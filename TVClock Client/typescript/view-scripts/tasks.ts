@@ -182,6 +182,7 @@ export class TodoViewManager implements IViewController {
 
             //Fetch from the server or use local data depending on whether it has already fetched from the server or not
             if (ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.serverFetchIdentifier) == undefined) {
+                // Todo, make network requests run async
                 //Send fetch request to server
                 let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [this.tasksIdentifier]});
                 this.updateTasks(JSON.parse(jsonData.data)[0]);

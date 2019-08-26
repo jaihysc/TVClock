@@ -45,12 +45,20 @@ for (let i = 0; i < buttonContainers.length; ++i) {
         //Inject view html into index.html #view-container
         $("#view-container").html(viewHtml[i]);
 
+        // Todo, redo the 3 methods in viewController
+        // initialize initializes ipcRenderer event handlers
+        // preload instead loads Jquery selectors, etc...
+        // loadEvents loads view dependent event handlers
+        // load stays the same
+
         //Load the corresponding viewController
         viewControllers[i].initialize();
         viewControllers[i].preload();
         viewControllers[i].load();
     });
 }
+
+// Todo, call initialize on all the views
 
 //Load the first view
 buttonContainers[0].click();

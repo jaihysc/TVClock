@@ -109,13 +109,22 @@ export class ScheduleViewManager implements IViewController {
             if (this.editingPeriod) {
                 // Edit mode
                 //Rename all scheduleItems with the name to the new name, change color to new color
-                for (let i = 0; i < this.scheduleItems.length; ++i) {
-                    if (this.scheduleItems[i].periodName == this.periodItems[this.selectedPeriodItemIndex].periodName) {
-                        this.scheduleItems[i].periodName = textInput;
-                        this.scheduleItems[i].color = String(this.inputColor.val()).substring(1); //Substring away hex # at beginning
+                for (let scheduleItem of this.scheduleItems) {
+                    if (scheduleItem.periodName == this.periodItems[this.selectedPeriodItemIndex].periodName) {
+                        scheduleItem.periodName = textInput;
+                        scheduleItem.color = String(this.inputColor.val()).substring(1); //Substring away hex # at beginning
+
+                        // Synchronise with server
+                        NetworkingFunctions.sendDataActionPacket(
+                            DataAction.Edit,
+                            this.scheduleItemsIdentifier,
+                            scheduleItem.hash,
+                            scheduleItem
+                        );
                     }
                 }
 
+                // Rename PeriodItem
                 this.periodItems[this.selectedPeriodItemIndex].periodName = textInput;
                 this.periodItems[this.selectedPeriodItemIndex].color = String(this.inputColor.val()).substring(1);
 
@@ -163,10 +172,18 @@ export class ScheduleViewManager implements IViewController {
             );
 
             //Set scheduleItems that were using this period back to None, set color to default
-            for (let i = 0; i < this.scheduleItems.length; ++i) {
-                if (this.scheduleItems[i].periodName == this.periodItems[this.selectedPeriodItemIndex].periodName) {
-                    this.scheduleItems[i].periodName = "None";
-                    this.scheduleItems[i].color = this.defaultPeriodColor;
+            for (let scheduleItem of this.scheduleItems) {
+                if (scheduleItem.periodName == this.periodItems[this.selectedPeriodItemIndex].periodName) {
+                    scheduleItem.periodName = "None";
+                    scheduleItem.color = this.defaultPeriodColor;
+
+                    // Synchronize with server
+                    NetworkingFunctions.sendDataActionPacket(
+                        DataAction.Edit,
+                        this.scheduleItemsIdentifier,
+                        scheduleItem.hash,
+                        scheduleItem
+                    );
                 }
             }
             ViewCommon.removeArrayItemAtIndex(this.periodItems, this.selectedPeriodItemIndex);
@@ -201,6 +218,7 @@ export class ScheduleViewManager implements IViewController {
 
             let fetchedFromServer: boolean = ipcRenderer.sendSync(LocalStorageOperation.Fetch, fetchFromServerIdentifier);
             if (!fetchedFromServer) {
+                // Todo, make these 2 network requests run async
                 //Fetch schedule and periodItems on startup or refresh
                 let retrievedScheduleIData = ipcRenderer.sendSync(
                     NetworkOperation.Send,
