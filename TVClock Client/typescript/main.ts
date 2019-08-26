@@ -1,6 +1,7 @@
 import {app, BrowserWindow, ipcMain} from "electron";
-import {NetworkManager} from "./NetworkManager";
+import {DataActionPacket, NetworkManager} from "./NetworkManager";
 import {NetworkingStatus, NetworkOperation, RequestType} from "./RequestTypes";
+import {NetworkingFunctions} from "./NetworkingFunctions";
 
 let mainWindow: BrowserWindow;
 
@@ -14,7 +15,7 @@ async function createWindow() {
     });
 
     mainWindow.setMenuBarVisibility(false);
-    await mainWindow.loadFile("./startup.html");
+    await mainWindow.loadFile("./views/startup.html");
 
     // Open the DevTools.
     // mainWindow.webContents.openDevTools();
@@ -24,7 +25,7 @@ async function createWindow() {
     //Networking
     let networkManager = new NetworkManager(mainWindow, async () => {
         //Load pages once connection is established
-        await mainWindow.loadFile("./index.html");
+        await mainWindow.loadFile("./views/index.html");
         mainWindow.webContents.send(NetworkingStatus.SetStatus, "connected");
         mainWindow.webContents.send(NetworkOperation.SetDisplayAddress,{
             hostname: networkManager.hostname,
@@ -40,6 +41,10 @@ async function createWindow() {
     //Sends specified identifiers with RequestType and returns the response
     ipcMain.on(NetworkOperation.Send, (event: any, args: { requestType: RequestType; identifiers: any[]; data: any[]; sendUpdate: boolean}) => {
         networkManager.send(event, args.requestType, args.identifiers, args.data, args.sendUpdate);
+    });
+
+    ipcMain.on(NetworkOperation.DataActionPacketBufferAdd, (event: any, args: { dataActionPacket: DataActionPacket }) => {
+       networkManager.dataActionPacketBufferAdd(args.dataActionPacket);
     });
 
     //Allow for changing of port + hostname

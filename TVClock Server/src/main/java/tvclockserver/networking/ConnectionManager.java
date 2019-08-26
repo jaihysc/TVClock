@@ -87,6 +87,31 @@ public class ConnectionManager {
     }
 
     /**
+     * Sends specified message to all connected clients excluding those blacklisted
+     * @param message message to send
+     * @param blacklistedConnections connections to not send to
+     */
+    public static void sendMessage(String message, IConnectionListeners[] blacklistedConnections) {
+        trimConnections();
+
+        for (IConnectionListeners connection : connections) {
+            boolean isConnectionListenerBlacklisted = false;
+
+            for (IConnectionListeners blackListedConnection : blacklistedConnections)
+                if (connection == blackListedConnection) {
+                    isConnectionListenerBlacklisted = true;
+                    break;
+                }
+
+            if (!isConnectionListenerBlacklisted)
+                connection.sendMessage(message);
+        }
+
+        System.out.println("Networking | Sent message: " + message);
+    }
+
+
+    /**
      * Removes connections no longer in use
      */
     private static void trimConnections() {

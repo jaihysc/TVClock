@@ -6,7 +6,7 @@ export class Connection {
     id: number;
 
     constructor(id: number,
-                ready: (id: number) => void, data: (id: number, response: Buffer) => void,
+                ready: (id: number) => void, data: (id: number, response: string) => void,
                 close: (id: number) => void, error: (id: number, str: string) => void) {
         let net = require("net");
         this.networkClient = new net.Socket();
@@ -17,7 +17,7 @@ export class Connection {
             () => { ready(this.id); });
 
         this.networkClient.on(NetworkingStatus.Data,
-            (response: Buffer) => { data(this.id, response) });
+            (response: string) => { data(this.id, response) });
 
         this.networkClient.on(NetworkingStatus.Close,
             () => { close(this.id); });

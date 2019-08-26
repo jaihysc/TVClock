@@ -1,23 +1,28 @@
 //Renderer
 //Manager for tasks view
 
-import { ipcRenderer } from "electron";
-import {RequestType, NetworkOperation, LocalStorageOperation} from "./RequestTypes";
-import {IViewController} from "./viewManager";
-import {StringTags, ViewCommon} from "./ViewCommon";
+import {ipcRenderer} from "electron";
+import {LocalStorageOperation, NetworkOperation, RequestType} from "../RequestTypes";
+import {IViewController} from "../viewManager";
+import {StringTags, ViewCommon} from "../ViewCommon";
+import {DataActionItem, NetworkingFunctions} from "../NetworkingFunctions";
+import {DataAction, DataActionPacket} from "../NetworkManager";
+import {DataActionFunctions} from "../DataActionFunctions";
 
 //A task in the task list
-class Task {
+class Task implements DataActionItem{
     text = "";
     startDate = new Date();
     endDate = new Date();
     priority: number;
+    hash: string;
 
-    constructor(text: string, startDate: Date, endDate: Date, priority: number) {
+    constructor(text: string, startDate: Date, endDate: Date, priority: number, hash: string) {
         this.text = text;
         this.startDate = startDate;
         this.endDate = endDate;
         this.priority = priority;
+        this.hash = hash;
     }
 }
 
@@ -67,8 +72,18 @@ export class TodoViewManager implements IViewController {
         });
 
         //Networking Update request handler
-        ipcRenderer.on(this.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, data: any[]) => {
-            this.updateTasks(data, false);
+        ipcRenderer.on(this.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
+            let task: Task | undefined = DataActionFunctions.handleDataActionPacket(dataActionPackets, this.taskListTasks) as Task;
+            if (task != undefined) {
+                task.startDate = new Date(task.startDate);
+                task.endDate = new Date(task.endDate);
+            }
+
+            // Decrement selectedTaskIndex if deleted item was the last element in array
+            if (this.selectedTaskIndex >= this.taskListTasks.length)
+                this.selectedTaskIndex--;
+
+            this.updateTaskList();
         });
 
         //Adds a new task to the task list
@@ -96,14 +111,33 @@ export class TodoViewManager implements IViewController {
 
             //Instead of adding a new task, overwrite if the user is in edit mode
             if (this.inEditMode) {
-                this.taskListTasks[this.selectedTaskIndex] = newTask; //Overwrite when editing
+                // Edit mode
+
+                this.taskListTasks[this.selectedTaskIndex] = newTask; //Overwrite old task
+                // Override task on server
+                NetworkingFunctions.sendDataActionPacket(
+                    DataAction.Edit,
+                    this.tasksIdentifier,
+                    newTask.hash,
+                    newTask
+                );
                 this.editButton.trigger("click"); //Exit edit mode by clicking the edit button
             } else {
+                // Add mode
+
                 this.taskListTasks.push(newTask);
+                // Add newly created task to server
+                NetworkingFunctions.sendDataActionPacket(
+                    DataAction.Add,
+                    this.tasksIdentifier,
+                    newTask.hash,
+                    newTask
+                );
             }
+
             this.wipeInputFields();
             //Refresh task list to include changes
-            this.updateTaskList(true);
+            this.updateTaskList();
         });
 
         //Edit and remove button functionality
@@ -115,6 +149,14 @@ export class TodoViewManager implements IViewController {
         });
 
         this.removeButton.on("click", () => {
+            let task = this.taskListTasks[this.selectedTaskIndex];
+            NetworkingFunctions.sendDataActionPacket(
+                DataAction.Remove,
+                this.tasksIdentifier,
+                task.hash,
+                task
+            );
+
             ViewCommon.removeArrayItemAtIndex(this.taskListTasks, this.selectedTaskIndex);
 
             //If there are no more tasks in the list, do not select anything
@@ -126,7 +168,7 @@ export class TodoViewManager implements IViewController {
                 this.selectedTaskIndex -= 1;
             }
 
-            this.updateTaskList(true);
+            this.updateTaskList();
         });
     }
 
@@ -140,31 +182,32 @@ export class TodoViewManager implements IViewController {
 
             //Fetch from the server or use local data depending on whether it has already fetched from the server or not
             if (ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.serverFetchIdentifier) == undefined) {
+                // Todo, make network requests run async
                 //Send fetch request to server
                 let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [this.tasksIdentifier]});
-                this.updateTasks(JSON.parse(jsonData.data)[0], false);
+                this.updateTasks(JSON.parse(jsonData.data)[0]);
 
                 //Save that a fetch has already been performed to the server
                 ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.serverFetchIdentifier, data: true});
             } else {
                 //Retrieve back stored data from localstorage
-                this.updateTasks(ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.tasksIdentifier), false);
+                this.updateTasks(ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.tasksIdentifier));
             }
         });
     }
 
-    private updateTasks(data: Task[], sendServerPost: boolean) {
+    private updateTasks(data: Task[]) {
         this.taskListTasks = []; //Clear tasks first
         if (data != undefined) {
             for (let i = 0; i < data.length; ++i) {
                 if (data[i] == undefined)
                     continue;
                 //Reconvert date text into date
-                this.taskListTasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate), data[i].priority));
+                this.taskListTasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate), data[i].priority, data[i].hash));
             }
         }
         //Updates the appearance of the task list with the new data
-        this.updateTaskList(sendServerPost);
+        this.updateTaskList();
     }
 
     private wipeInputFields() {
@@ -179,9 +222,10 @@ export class TodoViewManager implements IViewController {
     }
 
     //Injects html into the list for elements to appear on screen, saves task data to persistent
-    private updateTaskList(sendServerPost: boolean) {
+    private updateTaskList() {
         this.taskListHtml.html(""); //Clear old contents
 
+        // Copy of server's task sorting
         // Sorting tasks by priority ------------------------------------------------
         // Group by priority, then sort by task end date
         let taskPriorityGroups: Task[][] = [];  // Priority corresponds to array index
@@ -212,15 +256,14 @@ export class TodoViewManager implements IViewController {
 
         // Add back to this.taskListTasks
         this.taskListTasks = [];
-            for (let taskPriorityGroup of taskPriorityGroups) {
-                if (taskPriorityGroup == undefined)
-                    continue;
+        for (let taskPriorityGroup of taskPriorityGroups) {
+            if (taskPriorityGroup == undefined)
+                continue;
 
-                for (let task of taskPriorityGroup) {
-                    this.taskListTasks.push(task);
+            for (let task of taskPriorityGroup) {
+                this.taskListTasks.push(task);
             }
         }
-        console.log(this.taskListTasks);
 
         // ------------------------------------------------
         // Inject each task into the html after sanitizing it
@@ -274,9 +317,6 @@ export class TodoViewManager implements IViewController {
 
         //Save task data to local storage
         ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.tasksIdentifier, data: this.taskListTasks});
-        //Send POST to server
-        if (sendServerPost)
-            ipcRenderer.send(NetworkOperation.Send, {requestType: RequestType.Post, identifiers: [this.tasksIdentifier], data: this.taskListTasks});
     }
 
     //Shows/Hides the edit + remove buttons
@@ -327,6 +367,7 @@ export class TodoViewManager implements IViewController {
     }
 
     // Ensures that the task matches input requirements, dates are current, priority is greater than 0
+    // Hash will be auto generated if hash property is undefined
     private validateNewTask(taskText: string, dates: {start: String; end: String}, priority: number) {
         if (dates.start == "")
             dates.start = String(this.newTaskStartDate.attr("placeholder"));
@@ -353,7 +394,14 @@ export class TodoViewManager implements IViewController {
         //Make sure startDay is current and endDate is after startDate
         if (startDate >= currentDate && startDate < endDate) {
             //Creates a new task object with the user provided info
-            return new Task(taskText, new Date(startDate), new Date(endDate), priority);
+
+            // Hash is unique identifier made from UNIX timestamp + taskText
+            let hash: string;
+            if (this.inEditMode)  // Do not generate a new hash if in edit move
+                hash = this.taskListTasks[this.selectedTaskIndex].hash;
+            else
+                hash = NetworkingFunctions.createHash(new Date().getTime() + taskText);
+            return new Task(taskText, new Date(startDate), new Date(endDate), priority, hash);
         }
     }
 }
