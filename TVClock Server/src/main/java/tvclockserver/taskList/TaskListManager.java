@@ -1,6 +1,8 @@
 package tvclockserver.taskList;
 
 import tvclockserver.networking.PacketHandler;
+import tvclockserver.networking.models.DataAction;
+import tvclockserver.networking.models.DataActionPacket;
 import tvclockserver.storage.ApplicationData;
 import tvclockserver.storage.ApplicationDataIdentifier;
 
@@ -73,6 +75,8 @@ public class TaskListManager {
         TaskItem[] taskItems = ApplicationData.taskItems;
         if (taskItems == null)
             return;
+
+        ArrayList<DataActionPacket> removeDataActionPackets = new ArrayList<>();  // Packets to remove the trimmed tasks from clients
         boolean tasksTrimmed = false; //Avoids unnecessary networking Update requests when nothing was trimmed
 
         //Filter out taskItems whose endDate is passed
@@ -81,6 +85,7 @@ public class TaskListManager {
             if (taskItem.endDate.after(new Date())) {
                 taskItemsNew.add(taskItem);
             } else {
+                removeDataActionPackets.add(new DataActionPacket(DataAction.Remove, taskItem.hash, ""));
                 tasksTrimmed = true;
             }
         }
@@ -95,7 +100,10 @@ public class TaskListManager {
         }
 
         if (tasksTrimmed) {
-            PacketHandler.sendItemUpdateRequest(ApplicationDataIdentifier.taskItems);
+            PacketHandler.sendDataActionPackets(
+                    removeDataActionPackets.toArray(new DataActionPacket[0]),
+                    new String[] {ApplicationDataIdentifier.taskItems}
+            );
         }
     }
 

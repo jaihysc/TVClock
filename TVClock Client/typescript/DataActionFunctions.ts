@@ -6,19 +6,17 @@ export class DataActionFunctions {
     // Returns the item inheriting the DataActionItem class which was modified, undefined if nothing was modified
     public static handleDataActionPacket(dataActionPackets: DataActionPacket[], targetArray: DataActionItem[]): DataActionItem | undefined {
         for (let dataActionPacket of dataActionPackets) {
-            let data = JSON.parse(dataActionPacket.dataJson);
-
             switch (dataActionPacket.dataAction) {
                 case DataAction.Add:
-                    return this.add(targetArray, data);
+                    return this.add(targetArray, JSON.parse(dataActionPacket.dataJson));
                     break;
 
                 case DataAction.Edit:
-                    return this.edit(targetArray, data);
+                    return this.edit(targetArray, JSON.parse(dataActionPacket.dataJson));
                     break;
 
                 case DataAction.Remove:
-                    return this.remove(targetArray, data);
+                    this.remove(targetArray, dataActionPacket.hash);
                     break;
             }
         }
@@ -50,14 +48,13 @@ export class DataActionFunctions {
         return undefined;
     }
 
-    private static remove(targetArray: DataActionItem[], item: DataActionItem): DataActionItem | undefined {
+    // Does not return the item deleted since the item does not need to be specified in order to delete
+    private static remove(targetArray: DataActionItem[], hash: string): void {
         for (let i = 0; i < targetArray.length; ++i) {
-            if (targetArray[i].hash == item.hash) {
+            if (targetArray[i].hash == hash) {
                 targetArray.splice(i, 1);
-                return item;
+                return;
             }
         }
-
-        return undefined;
     }
 }

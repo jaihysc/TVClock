@@ -54,18 +54,9 @@ public class PacketHandler implements IMessageReceived {
         }
     }
 
-    /**
-     * Retrieves data at identifier and sends out an UPDATE request
-     * @param identifier identifier for the data to send
-     */
-    public static void sendItemUpdateRequest(String identifier) {
-        sendUpdateRequest(
-                gson.toJson(retrieveData(identifier)),
-                new String[]{identifier},
-                null
-        );
+    public static void sendDataActionPackets(DataActionPacket[] dataActionPackets, String[] dataIdentifiers) {
+        sendUpdateRequest(gson.toJson(dataActionPackets), dataIdentifiers, null);
     }
-
 
     // Helper methods
     private static void sendUpdateRequest(String data, String[] dataIdentifiers, Connection[] excludedConnections) {
