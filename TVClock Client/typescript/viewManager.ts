@@ -7,9 +7,17 @@ import {SettingViewManager} from "./view-scripts/settings";
 import {CssClasses} from "./ViewCommon";
 
 export interface IViewController {
-    initialize(): void; //Initialize jquery selectors
-    preload(): void //Setup event listeners
-    load(): void; //Document ready operations
+    // Initialize ipcRenderer event handlers and first time initialization actions
+    initialize(): void;
+
+    // Load JQuery selectors
+    preload(): void
+
+    // Load view dependent event handlers
+    loadEvent(): void;
+
+    // Document ready operations
+    load(): void;
 }
 
 //Hold all the views for each button of navbar in order + their controllers to execute
@@ -45,20 +53,17 @@ for (let i = 0; i < buttonContainers.length; ++i) {
         //Inject view html into index.html #view-container
         $("#view-container").html(viewHtml[i]);
 
-        // Todo, redo the 3 methods in viewController
-        // initialize initializes ipcRenderer event handlers
-        // preload instead loads Jquery selectors, etc...
-        // loadEvents loads view dependent event handlers
-        // load stays the same
-
         //Load the corresponding viewController
-        viewControllers[i].initialize();
         viewControllers[i].preload();
+        viewControllers[i].loadEvent();
         viewControllers[i].load();
     });
 }
 
-// Todo, call initialize on all the views
+// initialize all the views
+for (let viewController of viewControllers) {
+    viewController.initialize();
+}
 
 //Load the first view
 buttonContainers[0].click();

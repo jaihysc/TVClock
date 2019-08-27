@@ -8,6 +8,7 @@ import {StringTags, ViewCommon} from "../ViewCommon";
 import {DataActionItem, NetworkingFunctions} from "../NetworkingFunctions";
 import {DataAction, DataActionPacket} from "../NetworkManager";
 import {DataActionFunctions} from "../DataActionFunctions";
+import {Identifiers} from "../Identifiers";
 
 //A task in the task list
 class Task implements DataActionItem{
@@ -43,36 +44,19 @@ export class TodoViewManager implements IViewController {
     newTaskPriority!: JQuery<HTMLElement>;
     taskErrorText!: JQuery<HTMLElement>;
 
-
-    tasksIdentifier = "todo-view-tasks"; //Identifier for tasks in persistence storage
-    serverFetchIdentifier = "todo-view-fetchedFromServer";
-
     initialize(): void {
-        this.taskListHtml = $("#active-tasks-list");
-
-        this.addButton = $("#add-task-btn");
-        this.editButton = $("#edit-task-btn");
-        this.removeButton = $("#remove-task-btn");
-
-        this.newTaskText = $("#new-task-text");
-        this.newTaskStartDate = $("#new-task-start-date");
-        this.newTaskEndDate = $("#new-task-end-date");
-        this.newTaskPriority = $("#new-task-priority");
-        this.taskErrorText = $("#new-task-text-error");
-    }
-
-    preload(): void {
         //When the user hits the refresh button
         ipcRenderer.on(NetworkOperation.Reconnect, () => {
-            //Refetch from server by setting the serverFetchIdentifier to undefined
-            ipcRenderer.sendSync(LocalStorageOperation.Save, {identifier: this.serverFetchIdentifier, data: undefined});
+            // Re-fetch data from server
+            this.fetchDataFromServer();
+            this.selectedTaskIndex = -1;
 
             //Refresh the view
             $( ".nav-item a" )[0].click();
         });
 
         //Networking Update request handler
-        ipcRenderer.on(this.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
+        ipcRenderer.on(Identifiers.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
             let task: Task | undefined = DataActionFunctions.handleDataActionPacket(dataActionPackets, this.taskListTasks) as Task;
             if (task != undefined) {
                 task.startDate = new Date(task.startDate);
@@ -86,6 +70,31 @@ export class TodoViewManager implements IViewController {
             this.updateTaskList();
         });
 
+        this.fetchDataFromServer();
+    }
+
+    private fetchDataFromServer(): void {
+        // Fetch and store data from server to localstorage
+        let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [Identifiers.tasksIdentifier]});
+        this.updateTasks(JSON.parse(jsonData.data)[0]);  // Parse return data into this.taskListTasks
+        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.tasksIdentifier, data: this.taskListTasks});
+    }
+
+    preload(): void {
+        this.taskListHtml = $("#active-tasks-list");
+
+        this.addButton = $("#add-task-btn");
+        this.editButton = $("#edit-task-btn");
+        this.removeButton = $("#remove-task-btn");
+
+        this.newTaskText = $("#new-task-text");
+        this.newTaskStartDate = $("#new-task-start-date");
+        this.newTaskEndDate = $("#new-task-end-date");
+        this.newTaskPriority = $("#new-task-priority");
+        this.taskErrorText = $("#new-task-text-error");
+    }
+
+    loadEvent(): void {
         //Adds a new task to the task list
         this.addButton.on("click", () => {
             let taskText = String(this.newTaskText.val());
@@ -117,7 +126,7 @@ export class TodoViewManager implements IViewController {
                 // Override task on server
                 NetworkingFunctions.sendDataActionPacket(
                     DataAction.Edit,
-                    this.tasksIdentifier,
+                    Identifiers.tasksIdentifier,
                     newTask.hash,
                     newTask
                 );
@@ -129,7 +138,7 @@ export class TodoViewManager implements IViewController {
                 // Add newly created task to server
                 NetworkingFunctions.sendDataActionPacket(
                     DataAction.Add,
-                    this.tasksIdentifier,
+                    Identifiers.tasksIdentifier,
                     newTask.hash,
                     newTask
                 );
@@ -152,7 +161,7 @@ export class TodoViewManager implements IViewController {
             let task = this.taskListTasks[this.selectedTaskIndex];
             NetworkingFunctions.sendDataActionPacket(
                 DataAction.Remove,
-                this.tasksIdentifier,
+                Identifiers.tasksIdentifier,
                 task.hash,
                 task
             );
@@ -180,23 +189,53 @@ export class TodoViewManager implements IViewController {
 
             this.updatePlaceholderDates();
 
-            //Fetch from the server or use local data depending on whether it has already fetched from the server or not
-            if (ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.serverFetchIdentifier) == undefined) {
-                // Todo, make network requests run async
-                //Send fetch request to server
-                let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [this.tasksIdentifier]});
-                this.updateTasks(JSON.parse(jsonData.data)[0]);
-
-                //Save that a fetch has already been performed to the server
-                ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.serverFetchIdentifier, data: true});
-            } else {
-                //Retrieve back stored data from localstorage
-                this.updateTasks(ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.tasksIdentifier));
-            }
+            //Retrieve back stored data from localstorage
+            this.updateTasks(ipcRenderer.sendSync(LocalStorageOperation.Fetch, Identifiers.tasksIdentifier));
+            // Update task list appearance with new data
+            this.updateTaskList();
         });
     }
 
-    private updateTasks(data: Task[]) {
+    // Ensures that the task matches input requirements, dates are current, priority is greater than 0
+    // Hash will be auto generated if hash property is undefined
+    private validateNewTask(taskText: string, dates: {start: String; end: String}, priority: number): Task | undefined {
+        if (dates.start == "")
+            dates.start = String(this.newTaskStartDate.attr("placeholder"));
+        if (dates.end == "")
+            dates.end = String(this.newTaskEndDate.attr("placeholder"));
+
+        let startDate = new Date(String(dates.start));
+        let endDate = new Date(String(dates.end));
+
+        let currentDate = new Date();
+        currentDate.setDate(currentDate.getDate()-1); //Allow a margin 1 day back
+
+        // Validate priority number
+        if (priority < 0) {
+            this.taskErrorText.show();
+            this.taskErrorText.text("Priority must be greater than or equal to 0");
+            return;
+        } else if (priority > 100000) {
+            this.taskErrorText.show();
+            this.taskErrorText.text("Priority must less than 100 000");
+            return;
+        }
+
+        //Make sure startDay is current and endDate is after startDate
+        if (startDate >= currentDate && startDate < endDate) {
+            //Creates a new task object with the user provided info
+
+            // Hash is unique identifier made from UNIX timestamp + taskText
+            let hash: string;
+            if (this.inEditMode)  // Do not generate a new hash if in edit move
+                hash = this.taskListTasks[this.selectedTaskIndex].hash;
+            else
+                hash = NetworkingFunctions.createHash(new Date().getTime() + taskText);
+            return new Task(taskText, new Date(startDate), new Date(endDate), priority, hash);
+        }
+    }
+
+    private updateTasks(data: Task[]): void {
         this.taskListTasks = []; //Clear tasks first
         if (data != undefined) {
             for (let i = 0; i < data.length; ++i) {
@@ -206,23 +245,10 @@ export class TodoViewManager implements IViewController {
                 this.taskListTasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate), data[i].priority, data[i].hash));
             }
         }
-        //Updates the appearance of the task list with the new data
-        this.updateTaskList();
-    }
-
-    private wipeInputFields() {
-        this.newTaskText.val("");
-        this.newTaskStartDate.val("");
-        this.newTaskEndDate.val("");
-        // this.newTaskPriority.val();  // Don't wipe priority
-    }
-
-    private static toFullDateString(date: Date) {
-        return `${date.toDateString()} ${date.getHours()}:${date.getMinutes()}`;
     }
 
     //Injects html into the list for elements to appear on screen, saves task data to persistent
-    private updateTaskList() {
+    private updateTaskList(): void {
         this.taskListHtml.html(""); //Clear old contents
 
         // Copy of server's task sorting
@@ -316,21 +342,23 @@ export class TodoViewManager implements IViewController {
             ViewCommon.selectListItem(taskListTasksHtml, this.selectedTaskIndex);
 
         //Save task data to local storage
-        ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.tasksIdentifier, data: this.taskListTasks});
+        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.tasksIdentifier, data: this.taskListTasks});
     }
 
+
     //Shows/Hides the edit + remove buttons
-    private showModifierButtons() {
+    private showModifierButtons(): void {
         this.editButton.show();
         this.removeButton.show();
     }
-    private hideModifierButtons() {
+    private hideModifierButtons(): void {
         this.editButton.hide();
         this.removeButton.hide();
     }
 
+
     //Toggles the edit modes
-    private exitEditMode() {
+    private exitEditMode(): void {
         if (!this.inEditMode)
             return;
         this.inEditMode = false;
@@ -340,7 +368,7 @@ export class TodoViewManager implements IViewController {
 
         this.wipeInputFields();
     }
-    private enterEditMode() {
+    private enterEditMode(): void {
         if (this.inEditMode)
             return;
         //Rename add task button to update task
@@ -357,51 +385,24 @@ export class TodoViewManager implements IViewController {
         this.newTaskPriority.val(task.priority);
     }
 
-    private updatePlaceholderDates() {
+
+    private wipeInputFields(): void {
+        this.newTaskText.val("");
+        this.newTaskStartDate.val("");
+        this.newTaskEndDate.val("");
+        // this.newTaskPriority.val();  // Don't wipe priority
+    }
+
+    private static toFullDateString(date: Date): string {
+        return `${date.toDateString()} ${date.getHours()}:${date.getMinutes()}`;
+    }
+
+    private updatePlaceholderDates(): void {
         //Set placeholder start date to current time, and end date to 2 days in the future
         let currentDate = new Date();
         this.newTaskStartDate.attr("placeholder", TodoViewManager.toFullDateString(currentDate));
 
         currentDate.setDate(currentDate.getDate()+2); //add 2 days for the future end date
         this.newTaskEndDate.attr("placeholder", TodoViewManager.toFullDateString(currentDate));
-    }
-
-    // Ensures that the task matches input requirements, dates are current, priority is greater than 0
-    // Hash will be auto generated if hash property is undefined
-    private validateNewTask(taskText: string, dates: {start: String; end: String}, priority: number) {
-        if (dates.start == "")
-            dates.start = String(this.newTaskStartDate.attr("placeholder"));
-        if (dates.end == "")
-            dates.end = String(this.newTaskEndDate.attr("placeholder"));
-
-        let startDate = new Date(String(dates.start));
-        let endDate = new Date(String(dates.end));
-
-        let currentDate = new Date();
-        currentDate.setDate(currentDate.getDate()-1); //Allow a margin 1 day back
-
-        // Validate priority number
-        if (priority < 0) {
-            this.taskErrorText.show();
-            this.taskErrorText.text("Priority must be greater than or equal to 0");
-            return;
-        } else if (priority > 100000) {
-            this.taskErrorText.show();
-            this.taskErrorText.text("Priority must less than 100 000");
-            return;
-        }
-
-        //Make sure startDay is current and endDate is after startDate
-        if (startDate >= currentDate && startDate < endDate) {
-            //Creates a new task object with the user provided info
-
-            // Hash is unique identifier made from UNIX timestamp + taskText
-            let hash: string;
-            if (this.inEditMode)  // Do not generate a new hash if in edit move
-                hash = this.taskListTasks[this.selectedTaskIndex].hash;
-            else
-                hash = NetworkingFunctions.createHash(new Date().getTime() + taskText);
-            return new Task(taskText, new Date(startDate), new Date(endDate), priority, hash);
-        }
     }
 }

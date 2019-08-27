@@ -16,7 +16,9 @@ export class SettingViewManager implements IViewController {
     googleDocsDocumentId!: JQuery<HTMLElement>;
     openWeatherMapLocationCity!: JQuery<HTMLElement>;
 
-    initialize(): void {
+    initialize(): void {}
+
+    preload(): void {
         this.networkingHostname = $("#networking-hostname");
         this.networkingPort = $("#networking-port");
         this.networkingUpdateBtn = $("#networking-info-update-btn");
@@ -27,7 +29,7 @@ export class SettingViewManager implements IViewController {
         this.openWeatherMapLocationCity = $("#weather-location-city");
     }
 
-    preload(): void {
+    loadEvent(): void {
         //Updating networking status with refresh button click
         this.networkingUpdateBtn.on("click", () => {
             if (this.networkingHostname != null)
@@ -61,7 +63,7 @@ export class SettingViewManager implements IViewController {
         })
     }
 
-    private validateAPIField(field: JQuery<HTMLElement>, identifier: string, postIdentifiers: string[], postFields: string[]) {
+    private validateAPIField(field: JQuery<HTMLElement>, identifier: string, postIdentifiers: string[], postFields: string[]): void {
         //Only add fields that are filled out
         if (field.val() == "")
             return;

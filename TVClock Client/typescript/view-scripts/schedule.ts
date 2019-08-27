@@ -9,6 +9,7 @@ import {StringTags, ViewCommon} from "../ViewCommon";
 import {DataAction, DataActionPacket} from "../NetworkManager";
 import {DataActionItem, NetworkingFunctions} from "../NetworkingFunctions";
 import {DataActionFunctions} from "../DataActionFunctions";
+import {Identifiers} from "../Identifiers";
 
 class ScheduleItemGeneric implements DataActionItem {
     hash: string;
@@ -32,17 +33,13 @@ export class ScheduleViewManager implements IViewController {
 
     defaultPeriodColor = "464646";
 
-    scheduleItemsIdentifier = "schedule-view-scheduleItems";
-    periodItemsIdentifier = "schedule-view-periodItems";
-
-    scheduleItemContainer!: JQuery<HTMLElement>;
-    periodItemContainer!: JQuery<HTMLElement>;
-
     selectedScheduleItemIndex = -1;
     selectedPeriodItemIndex = -1; // -1 indicates nothing is selected, between 0 and 23
     scheduleItemSelected = false;
-
     editingPeriod = false;
+
+    scheduleItemContainer!: JQuery<HTMLElement>;
+    periodItemContainer!: JQuery<HTMLElement>;
 
     periodConfigurationMenu!: JQuery<HTMLElement>;
 
@@ -55,6 +52,52 @@ export class ScheduleViewManager implements IViewController {
     inputColor!: JQuery<HTMLElement>;
 
     initialize(): void {
+        //Networking updates
+        ipcRenderer.on(Identifiers.scheduleItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
+            DataActionFunctions.handleDataActionPacket(dataActionPackets, this.scheduleItems);
+            this.refreshScheduleList();
+        });
+        ipcRenderer.on(Identifiers.periodItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
+            DataActionFunctions.handleDataActionPacket(dataActionPackets, this.periodItems);
+
+            // Decrement selectedPeriodItemIndex if deleted item was the last element in array
+            if (this.selectedPeriodItemIndex >= this.periodItems.length)
+                this.selectedPeriodItemIndex--;
+
+            this.refreshPeriodList();
+        });
+
+        ipcRenderer.on(NetworkOperation.Reconnect, () => {
+            this.fetchDataFromServer();
+            //Refresh the view
+            $( ".nav-item a" )[1].click();
+        });
+
+        this.fetchDataFromServer();
+    }
+
+    private fetchDataFromServer(): void {
+        //Fetch schedule and periodItems on startup or refresh
+        let retrievedScheduleIData = ipcRenderer.sendSync(
+            NetworkOperation.Send,
+            {requestType: RequestType.Get, identifiers: [Identifiers.scheduleItemsIdentifier]});
+        let retrievedPeriodData = ipcRenderer.sendSync(
+            NetworkOperation.Send,
+            {requestType: RequestType.Get, identifiers: [Identifiers.periodItemsIdentifier]});
+
+        let scheduleData: ScheduleItemGeneric[] = JSON.parse(retrievedScheduleIData.data)[0];
+        let periodData: ScheduleItemGeneric[] = JSON.parse(retrievedPeriodData.data)[0];
+
+        // Process received data
+        this.updateScheduleItems(scheduleData);
+        this.updatePeriodItems(periodData);
+
+        // Save data to local storage
+        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.scheduleItemsIdentifier, data: this.scheduleItems});
+        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.periodItemsIdentifier, data: this.periodItems});
+    }
+
+    preload(): void {
         this.scheduleItemContainer = $("#view-schedule-scheduleItem-container");
         this.periodItemContainer = $("#view-schedule-periodItem-container");
         this.periodConfigurationMenu = $("#period-configuration-menu");
@@ -69,22 +112,7 @@ export class ScheduleViewManager implements IViewController {
         this.inputColor = $("#new-period-color")
     }
 
-    preload(): void {
-        //Networking updates
-        ipcRenderer.on(this.scheduleItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
-            DataActionFunctions.handleDataActionPacket(dataActionPackets, this.scheduleItems);
-            this.refreshScheduleList();
-        });
-        ipcRenderer.on(this.periodItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
-            DataActionFunctions.handleDataActionPacket(dataActionPackets, this.periodItems);
-
-            // Decrement selectedPeriodItemIndex if deleted item was the last element in array
-            if (this.selectedPeriodItemIndex >= this.periodItems.length)
-                this.selectedPeriodItemIndex--;
-
-            this.refreshPeriodList();
-        });
-
+    loadEvent(): void {
         this.addButton.on("click", () => {
             let textInput = String(this.inputText .val());
             if (textInput == "") {
@@ -117,7 +145,7 @@ export class ScheduleViewManager implements IViewController {
                         // Synchronise with server
                         NetworkingFunctions.sendDataActionPacket(
                             DataAction.Edit,
-                            this.scheduleItemsIdentifier,
+                            Identifiers.scheduleItemsIdentifier,
                             scheduleItem.hash,
                             scheduleItem
                         );
@@ -130,7 +158,7 @@ export class ScheduleViewManager implements IViewController {
 
                 NetworkingFunctions.sendDataActionPacket(
                     DataAction.Edit,
-                    this.periodItemsIdentifier,
+                    Identifiers.periodItemsIdentifier,
                     this.periodItems[this.selectedPeriodItemIndex].hash,
                     this.periodItems[this.selectedPeriodItemIndex]
                 );
@@ -144,7 +172,7 @@ export class ScheduleViewManager implements IViewController {
                 let newPeriodItem = new ScheduleItemGeneric(textInput, null, String(this.inputColor.val()).substring(1), hash);  // Cut off the # at the start of the color string
                 NetworkingFunctions.sendDataActionPacket(
                     DataAction.Add,
-                    this.periodItemsIdentifier,
+                    Identifiers.periodItemsIdentifier,
                     hash,
                     newPeriodItem
                 );
@@ -166,7 +194,7 @@ export class ScheduleViewManager implements IViewController {
         this.removeButton.on("click", () => {
             NetworkingFunctions.sendDataActionPacket(
                 DataAction.Remove,
-                this.periodItemsIdentifier,
+                Identifiers.periodItemsIdentifier,
                 this.periodItems[this.selectedPeriodItemIndex].hash,
                 this.periodItems[this.selectedPeriodItemIndex]
             );
@@ -180,7 +208,7 @@ export class ScheduleViewManager implements IViewController {
                     // Synchronize with server
                     NetworkingFunctions.sendDataActionPacket(
                         DataAction.Edit,
-                        this.scheduleItemsIdentifier,
+                        Identifiers.scheduleItemsIdentifier,
                         scheduleItem.hash,
                         scheduleItem
                     );
@@ -207,107 +235,30 @@ export class ScheduleViewManager implements IViewController {
             this.errorText.hide();
             this.periodConfigurationMenu.hide();
 
-            const fetchFromServerIdentifier = "schedule-view-fetchedFromServer";
+            // Retrieve data from local storage
+            let retrievedScheduleItems = ipcRenderer.sendSync(LocalStorageOperation.Fetch, Identifiers.scheduleItemsIdentifier);
+            this.updateScheduleItems(retrievedScheduleItems);
 
-            ipcRenderer.on(NetworkOperation.Reconnect, () => {
-                //Clear all stored data
-                ipcRenderer.sendSync(LocalStorageOperation.Save, {identifier: fetchFromServerIdentifier, data: undefined});
-                //Refresh the view
-                $( ".nav-item a" )[1].click();
-            });
+            let retrievedPeriodItems = ipcRenderer.sendSync(LocalStorageOperation.Fetch, Identifiers.periodItemsIdentifier);
+            this.updatePeriodItems(retrievedPeriodItems);
 
-            let fetchedFromServer: boolean = ipcRenderer.sendSync(LocalStorageOperation.Fetch, fetchFromServerIdentifier);
-            if (!fetchedFromServer) {
-                // Todo, make these 2 network requests run async
-                //Fetch schedule and periodItems on startup or refresh
-                let retrievedScheduleIData = ipcRenderer.sendSync(
-                    NetworkOperation.Send,
-                    {requestType: RequestType.Get, identifiers: [this.scheduleItemsIdentifier]});
-                let retrievedPeriodData = ipcRenderer.sendSync(
-                    NetworkOperation.Send,
-                    {requestType: RequestType.Get, identifiers: [this.periodItemsIdentifier]});
-
-                let scheduleData: ScheduleItemGeneric[] | undefined = undefined;
-                if (retrievedScheduleIData != undefined)
-                    scheduleData = JSON.parse(retrievedScheduleIData.data)[0];
-
-                let periodData: ScheduleItemGeneric[] | undefined = undefined;
-                if (retrievedPeriodData.data != undefined)
-                    periodData = JSON.parse(retrievedPeriodData.data)[0];
-
-                // Generate default schedule list if connection to server failed
-                if (scheduleData == undefined || periodData == undefined) {
-                    //Clear any old items in the 2 lists on reconnect
-                    this.clearAllData();
-
-                    // 12PM - or 0 in 24 hour
-                    // Hash is 0 - 24, same as the array index of the schedule item, they DO NOT need to be generated,
-                    // since these 24 items are constant
-                    this.timeTableAppend(new ScheduleItemGeneric("None", "12 PM", this.defaultPeriodColor, "0"));
-                    this.scheduleItems.push(new ScheduleItemGeneric("None", "12 PM", this.defaultPeriodColor, "0"));
-
-                    // AM
-                    for (let i = 1; i <= 12; ++i) {
-                        let item = new ScheduleItemGeneric("None", i + " AM", this.defaultPeriodColor, i.toString());
-                        this.timeTableAppend(item); //None is default period name
-                        this.scheduleItems.push(item);
-                    }
-                    // PM
-                    for (let i = 1; i <= 11; ++i) {
-                        let item = new ScheduleItemGeneric("None", i + " PM", this.defaultPeriodColor, (12 + i).toString());
-                        this.timeTableAppend(item);
-                        this.scheduleItems.push(item);
-                    }
-
-                    // Use "None" as default period item,
-                    // this does not have a hash since it cannot be modified
-                    this.periodItems.push(new ScheduleItemGeneric("None", null, this.defaultPeriodColor, ""));
-
-                    this.refreshScheduleList();
-                    this.refreshPeriodList();
-                } else {
-                    // Schedule list already exists on server
-                    this.updateScheduleItems(scheduleData);
-                    this.updatePeriodItems(periodData);
-                }
-
-                //Save that it has fetched from server
-                ipcRenderer.send(LocalStorageOperation.Save, {identifier: fetchFromServerIdentifier, data: true});
-            } else {
-                // Fetched from server already,
-                // Retrieve from localstorage
-                let retrievedScheduleItems = ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.scheduleItemsIdentifier);
-                this.updateScheduleItems(retrievedScheduleItems);
-
-                let retrievedPeriodItems = ipcRenderer.sendSync(LocalStorageOperation.Fetch, this.periodItemsIdentifier);
-                this.updatePeriodItems(retrievedPeriodItems);
-            }
+            this.refreshScheduleList();
+            this.refreshPeriodList()
         });
     }
 
-    private clearAllData() {
-        this.scheduleItemContainer.html("");
-        this.periodItemContainer.html("");
-        this.scheduleItems = [];
-        this.periodItems = [];
-    }
-
-    private updateScheduleItems(data: ScheduleItemGeneric[]) {
+    private updateScheduleItems(data: ScheduleItemGeneric[]): void {
         this.scheduleItems = [];
         for (let i = 0; i < data.length; ++i)
             this.scheduleItems.push(new ScheduleItemGeneric(data[i].periodName, data[i].hour, data[i].color, data[i].hash));
-
-        this.refreshScheduleList();
     }
-    private updatePeriodItems(data: ScheduleItemGeneric[]) {
+    private updatePeriodItems(data: ScheduleItemGeneric[]): void {
         this.periodItems = [];
         for (let i = 0; i < data.length; ++i)
             this.periodItems.push(new ScheduleItemGeneric(data[i].periodName, null, data[i].color, data[i].hash));
-
-        this.refreshPeriodList()
     }
 
-    private deselectAllPeriods() {
+    private deselectAllPeriods(): void {
         this.selectedPeriodItemIndex = -1;
 
         let htmlPeriodItems = $(".list-period-item");
@@ -315,7 +266,7 @@ export class ScheduleViewManager implements IViewController {
             ViewCommon.deselectListItem(htmlPeriodItems, i);
     }
 
-    private timeTableAppend(item: ScheduleItemGeneric) {
+    private timeTableAppend(item: ScheduleItemGeneric): void {
         if (item.hour == null)
             item.hour = "";
 
@@ -337,7 +288,7 @@ export class ScheduleViewManager implements IViewController {
     }
 
     //Refresh list
-    private refreshScheduleList() {
+    private refreshScheduleList(): void {
         this.scheduleItemContainer.html(" "); //Clear old text
         for (let i = 0; i < this.scheduleItems.length; ++i)
             this.timeTableAppend(this.scheduleItems[i]);
@@ -383,10 +334,10 @@ export class ScheduleViewManager implements IViewController {
             ViewCommon.selectListItem(htmlScheduleItems, this.selectedScheduleItemIndex);
 
         //Save scheduleItems
-        ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.scheduleItemsIdentifier, data: this.scheduleItems});
+        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.scheduleItemsIdentifier, data: this.scheduleItems});
     }
 
-    private refreshPeriodList() {
+    private refreshPeriodList(): void {
         this.periodItemContainer.html(""); //Clear old text
 
         for (let i = 0; i < this.periodItems.length; ++i) {
@@ -425,7 +376,7 @@ export class ScheduleViewManager implements IViewController {
                         // Send edits to the period of a scheduleItem
                         NetworkingFunctions.sendDataActionPacket(
                             DataAction.Edit,
-                            this.scheduleItemsIdentifier,
+                            Identifiers.scheduleItemsIdentifier,
                             this.scheduleItems[this.selectedScheduleItemIndex].hash,
                             this.scheduleItems[this.selectedScheduleItemIndex]
                         );
@@ -452,10 +403,10 @@ export class ScheduleViewManager implements IViewController {
             this.periodConfigurationMenu.hide();
 
         //Save periodItems
-        ipcRenderer.send(LocalStorageOperation.Save, {identifier: this.periodItemsIdentifier, data: this.periodItems});
+        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.periodItemsIdentifier, data: this.periodItems});
     }
 
-    private exitEditMode() {
+    private exitEditMode(): void {
         if (!this.editingPeriod)
             return;
         this.editingPeriod = false;
@@ -465,7 +416,7 @@ export class ScheduleViewManager implements IViewController {
 
         this.inputText .val("");
     }
-    private enterEditMode() {
+    private enterEditMode(): void {
         if (this.editingPeriod)
             return;
         //Rename add task button to update task
