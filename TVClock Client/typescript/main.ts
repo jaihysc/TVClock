@@ -1,7 +1,6 @@
 import {app, BrowserWindow, ipcMain} from "electron";
 import {DataActionPacket, NetworkManager} from "./NetworkManager";
 import {NetworkingStatus, NetworkOperation, RequestType} from "./RequestTypes";
-import {NetworkingFunctions} from "./NetworkingFunctions";
 
 let mainWindow: BrowserWindow;
 
@@ -14,51 +13,12 @@ async function createWindow() {
         height: 1080,
     });
 
-    mainWindow.setMenuBarVisibility(false);
-    await mainWindow.loadFile("./views/startup.html");
-
-    // Open the DevTools.
-    // mainWindow.webContents.openDevTools();
-
-    require("./dataPersistence");
-
-    //Networking
-    let networkManager = new NetworkManager(mainWindow, async () => {
-        //Load pages once connection is established
-        await mainWindow.loadFile("./views/index.html");
-        mainWindow.webContents.send(NetworkingStatus.SetStatus, "connected");
-        mainWindow.webContents.send(NetworkOperation.SetDisplayAddress,{
-            hostname: networkManager.hostname,
-            port: String(networkManager.port)}
-        );
-    });
-
-    //Event handlers from renderer process
-    ipcMain.on(NetworkOperation.Reconnect, () => {
-        networkManager.reconnect();
-    });
-
-    //Sends specified identifiers with RequestType and returns the response
-    ipcMain.on(NetworkOperation.Send, (event: any, args: { requestType: RequestType; identifiers: any[]; data: any[]; sendUpdate: boolean}) => {
-        networkManager.send(event, args.requestType, args.identifiers, args.data, args.sendUpdate);
-    });
-
-    ipcMain.on(NetworkOperation.DataActionPacketBufferAdd, (event: any, args: { dataActionPacket: DataActionPacket }) => {
-       networkManager.dataActionPacketBufferAdd(args.dataActionPacket);
-    });
-
-    //Allow for changing of port + hostname
-    ipcMain.on(NetworkOperation.ConfigModify, (event: any, arg: { port: number; hostname: string; }) => {
-        networkManager.modifyConfig(arg.hostname, arg.port)
-    });
-
-    // Window close
     mainWindow.on("closed", () => {
         console.log("Program exiting...");
 
         //Close networking connections
         try {
-            networkManager.disconnect();
+            NetworkManager.disconnect();
         } catch {
         }
 
@@ -66,6 +26,47 @@ async function createWindow() {
         mainWindow.destroy();
 
         console.log("Goodbye!");
+    });
+
+    mainWindow.setMenuBarVisibility(false);
+    await mainWindow.loadFile("./views/startup.html");
+
+    initializeNetworking(async () => {
+        // Connection established:
+        // Load main menu
+        mainWindow.webContents.send(NetworkingStatus.SetConnectionStatus, "Loading menus...");
+        await mainWindow.loadFile("./views/index.html");
+
+        mainWindow.webContents.send(NetworkingStatus.SetConnectionStatus, "connected");
+        mainWindow.webContents.send(NetworkOperation.SetDisplayAddress,{
+            hostname: NetworkManager.hostname,
+            port: String(NetworkManager.port)}
+        );
+
+        NetworkManager.fetchViewData(() => {});
+    });
+}
+
+function initializeNetworking(readyCallback: () => void): void {
+    NetworkManager.init(mainWindow, readyCallback);
+
+    //Event handlers from renderer process
+    ipcMain.on(NetworkOperation.Reconnect, () => {
+        NetworkManager.reconnect();
+    });
+
+    //Sends specified identifiers with RequestType and returns the response
+    ipcMain.on(NetworkOperation.Send, (event: any, args: { requestType: RequestType; identifiers: any[]; data: any[]; sendUpdate: boolean}) => {
+        NetworkManager.send(event, args.requestType, args.identifiers, args.data, args.sendUpdate);
+    });
+
+    ipcMain.on(NetworkOperation.DataActionPacketBufferAdd, (event: any, args: { dataActionPacket: DataActionPacket }) => {
+        NetworkManager.dataActionPacketBufferAdd(args.dataActionPacket);
+    });
+
+    //Allow for changing of port + hostname
+    ipcMain.on(NetworkOperation.ConfigModify, (event: any, arg: { port: number; hostname: string; }) => {
+        NetworkManager.modifyConfig(arg.hostname, arg.port)
     });
 }
 

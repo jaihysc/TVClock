@@ -3,8 +3,8 @@
 
 import { ipcRenderer } from "electron";
 import invert from "invert-color";
-import {RequestType, NetworkOperation, LocalStorageOperation} from "../RequestTypes";
-import {IViewController} from "../viewManager";
+import {RequestType, NetworkOperation} from "../RequestTypes";
+import {IViewController, ViewManager} from "../viewManager";
 import {StringTags, ViewCommon} from "../ViewCommon";
 import {DataAction, DataActionPacket} from "../NetworkManager";
 import {DataActionItem, NetworkingFunctions} from "../NetworkingFunctions";
@@ -55,7 +55,9 @@ export class ScheduleViewManager implements IViewController {
         //Networking updates
         ipcRenderer.on(Identifiers.scheduleItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
             DataActionFunctions.handleDataActionPacket(dataActionPackets, this.scheduleItems);
-            this.refreshScheduleList();
+
+            if (ViewManager.currentViewIndex == 1)
+                this.refreshScheduleList();
         });
         ipcRenderer.on(Identifiers.periodItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
             DataActionFunctions.handleDataActionPacket(dataActionPackets, this.periodItems);
@@ -64,19 +66,18 @@ export class ScheduleViewManager implements IViewController {
             if (this.selectedPeriodItemIndex >= this.periodItems.length)
                 this.selectedPeriodItemIndex--;
 
-            this.refreshPeriodList();
+            if (ViewManager.currentViewIndex == 1)
+                this.refreshPeriodList();
         });
 
         ipcRenderer.on(NetworkOperation.Reconnect, () => {
-            this.fetchDataFromServer();
+            this.selectedPeriodItemIndex = -1;
             //Refresh the view
             $( ".nav-item a" )[1].click();
         });
-
-        this.fetchDataFromServer();
     }
 
-    private fetchDataFromServer(): void {
+    fetchDataFromServer(): void {
         //Fetch schedule and periodItems on startup or refresh
         let retrievedScheduleIData = ipcRenderer.sendSync(
             NetworkOperation.Send,
@@ -91,10 +92,6 @@ export class ScheduleViewManager implements IViewController {
         // Process received data
         this.updateScheduleItems(scheduleData);
         this.updatePeriodItems(periodData);
-
-        // Save data to local storage
-        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.scheduleItemsIdentifier, data: this.scheduleItems});
-        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.periodItemsIdentifier, data: this.periodItems});
     }
 
     preload(): void {
@@ -235,15 +232,8 @@ export class ScheduleViewManager implements IViewController {
             this.errorText.hide();
             this.periodConfigurationMenu.hide();
 
-            // Retrieve data from local storage
-            let retrievedScheduleItems = ipcRenderer.sendSync(LocalStorageOperation.Fetch, Identifiers.scheduleItemsIdentifier);
-            this.updateScheduleItems(retrievedScheduleItems);
-
-            let retrievedPeriodItems = ipcRenderer.sendSync(LocalStorageOperation.Fetch, Identifiers.periodItemsIdentifier);
-            this.updatePeriodItems(retrievedPeriodItems);
-
             this.refreshScheduleList();
-            this.refreshPeriodList()
+            this.refreshPeriodList();
         });
     }
 
@@ -332,9 +322,6 @@ export class ScheduleViewManager implements IViewController {
         //Select the previously selected task
         if (this.selectedScheduleItemIndex >= 0)
             ViewCommon.selectListItem(htmlScheduleItems, this.selectedScheduleItemIndex);
-
-        //Save scheduleItems
-        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.scheduleItemsIdentifier, data: this.scheduleItems});
     }
 
     private refreshPeriodList(): void {
@@ -401,9 +388,6 @@ export class ScheduleViewManager implements IViewController {
         //Do not show default period configuration, "None"
         if (this.selectedPeriodItemIndex == 0)
             this.periodConfigurationMenu.hide();
-
-        //Save periodItems
-        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.periodItemsIdentifier, data: this.periodItems});
     }
 
     private exitEditMode(): void {

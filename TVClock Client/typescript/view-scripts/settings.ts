@@ -18,6 +18,8 @@ export class SettingViewManager implements IViewController {
 
     initialize(): void {}
 
+    fetchDataFromServer(): void {}
+
     preload(): void {
         this.networkingHostname = $("#networking-hostname");
         this.networkingPort = $("#networking-port");

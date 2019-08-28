@@ -5,7 +5,8 @@ export enum RequestType {
 }
 
 export enum NetworkingStatus {
-    SetStatus = "networking-status",
+    SetStatusBarText = "status-bar-text-set",
+    SetConnectionStatus = "networking-status",
     Ready = "ready",
     Data = "data",
     Close = "close",
@@ -17,11 +18,9 @@ export enum NetworkOperation {
     Reconnect = "networking-reconnect",
     ConfigModify = "networking-info-modify",
     SetDisplayAddress = "networking-display-address",
-    DataActionPacketBufferAdd = "networking-DataActionPacketBufferAdd"
+    DataActionPacketBufferAdd = "networking-DataActionPacketBufferAdd",
 
-}
-
-export enum LocalStorageOperation {
-    Save = "data-save", //Save to local storage
-    Fetch = "data-retrieve" //Fetch from local storage
+    ViewDataFetch = "networking-fetch-view-data",
+    ViewDataFetchSuccess = "networking-fetch-view-data-success",
+    ViewDataFetchFailure = "networking-fetch-view-data-failure"
 }

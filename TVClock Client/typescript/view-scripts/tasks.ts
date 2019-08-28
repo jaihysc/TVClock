@@ -2,8 +2,8 @@
 //Manager for tasks view
 
 import {ipcRenderer} from "electron";
-import {LocalStorageOperation, NetworkOperation, RequestType} from "../RequestTypes";
-import {IViewController} from "../viewManager";
+import {NetworkOperation, RequestType} from "../RequestTypes";
+import {IViewController, ViewManager} from "../viewManager";
 import {StringTags, ViewCommon} from "../ViewCommon";
 import {DataActionItem, NetworkingFunctions} from "../NetworkingFunctions";
 import {DataAction, DataActionPacket} from "../NetworkManager";
@@ -11,7 +11,7 @@ import {DataActionFunctions} from "../DataActionFunctions";
 import {Identifiers} from "../Identifiers";
 
 //A task in the task list
-class Task implements DataActionItem{
+class Task implements DataActionItem {
     text = "";
     startDate = new Date();
     endDate = new Date();
@@ -47,8 +47,7 @@ export class TodoViewManager implements IViewController {
     initialize(): void {
         //When the user hits the refresh button
         ipcRenderer.on(NetworkOperation.Reconnect, () => {
-            // Re-fetch data from server
-            this.fetchDataFromServer();
+            // Reinitialize the view
             this.selectedTaskIndex = -1;
 
             //Refresh the view
@@ -67,17 +66,15 @@ export class TodoViewManager implements IViewController {
             if (this.selectedTaskIndex >= this.taskListTasks.length)
                 this.selectedTaskIndex--;
 
-            this.updateTaskList();
+            if (ViewManager.currentViewIndex == 0)
+                this.updateTaskList();
         });
-
-        this.fetchDataFromServer();
     }
 
-    private fetchDataFromServer(): void {
+    fetchDataFromServer(): void {
         // Fetch and store data from server to localstorage
         let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [Identifiers.tasksIdentifier]});
         this.updateTasks(JSON.parse(jsonData.data)[0]);  // Parse return data into this.taskListTasks
-        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.tasksIdentifier, data: this.taskListTasks});
     }
 
     preload(): void {
@@ -189,8 +186,6 @@ export class TodoViewManager implements IViewController {
 
             this.updatePlaceholderDates();
 
-            //Retrieve back stored data from localstorage
-            this.updateTasks(ipcRenderer.sendSync(LocalStorageOperation.Fetch, Identifiers.tasksIdentifier));
             // Update task list appearance with new data
             this.updateTaskList();
         });
@@ -340,9 +335,6 @@ export class TodoViewManager implements IViewController {
         //Preselect selectedTaskIndex
         if (this.selectedTaskIndex >= 0)
             ViewCommon.selectListItem(taskListTasksHtml, this.selectedTaskIndex);
-
-        //Save task data to local storage
-        ipcRenderer.send(LocalStorageOperation.Save, {identifier: Identifiers.tasksIdentifier, data: this.taskListTasks});
     }
 
 

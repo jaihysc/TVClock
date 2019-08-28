@@ -4,6 +4,7 @@ import {NetworkingStatus, NetworkOperation, RequestType} from "./RequestTypes";
 import {StringTags} from "./ViewCommon";
 import {Connection} from "./Connection";
 import BrowserWindow = Electron.BrowserWindow;
+import {ipcMain} from "electron";
 
 //Handles communication between the client and server
 
@@ -49,32 +50,32 @@ export class DataActionPacket {
 }
 
 export class NetworkManager {
-    window: BrowserWindow;
-    connection: Connection;
+    private static window: BrowserWindow;
+    private static connection: Connection;
 
-    networkConnected: boolean = false;
-    readyCallbackUsed: boolean = false; //Whether the initial ready callback was used
+    private static networkConnected: boolean = false;
+    private static readyCallbackUsed: boolean = false; //Whether the initial ready callback was used
 
-    queuedRequests: {id: number; event: any}[]; //Array of send packets awaiting a response
-    networkingId: number = 0; //Keeps track of send and received requests
+    private static queuedRequests: {id: number; event: any}[]; //Array of send packets awaiting a response
+    private static networkingId: number = 0; //Keeps track of send and received requests
 
-    connectionId: number = 0; //Keeps track of current active connection to avoid listening to events
+    private static connectionId: number = 0; //Keeps track of current active connection to avoid listening to events
                                 // emitted after a connection has been discarded
-    activeConnectionId: number = 0; //Id of active connection, automatically set to the id of the highest connectionId
+    private static activeConnectionId: number = 0; //Id of active connection, automatically set to the id of the highest connectionId
                                 //connection when it emits an event
 
-    hostname: string = "";
-    port: number = 0;
+    public static hostname: string = "";
+    public static port: number = 0;
 
     // Buffer to store outbound DataActionPackets
-    private dataActionPacketBuffer: DataActionPacket[] = [];  // Add to front, pop from back as the outbound DataActionPackets are sent
+    private static dataActionPacketBuffer: DataActionPacket[] = [];  // Add to front, pop from back as the outbound DataActionPackets are sent
 
-    readyCallback: () => void;
-    dataCallback: (id: number, response: string) => void;
-    closeCallback: (id: number) => void;
-    errorCallback: (id: number, str: string) => void;
+    private static readyCallback: () => void;
+    private static dataCallback: (id: number, response: string) => void;
+    private static closeCallback: (id: number) => void;
+    private static errorCallback: (id: number, str: string) => void;
 
-    constructor(window: BrowserWindow, ready: () => void) {
+    public static init(window: BrowserWindow, ready: () => void): void {
         this.window = window;
 
         this.queuedRequests = [];
@@ -115,7 +116,7 @@ export class NetworkManager {
 
             console.log("Networking | Connection closed");
             try {
-                this.window.webContents.send(NetworkingStatus.SetStatus, "disconnected");
+                this.window.webContents.send(NetworkingStatus.SetConnectionStatus, "disconnected");
             } catch {
                 console.log("Networking | Connection closed, failed to send disconnect status");
             }
@@ -134,13 +135,14 @@ export class NetworkManager {
             });
             this.queuedRequests = []; //clear queued requests
 
-            this.window.webContents.send(NetworkingStatus.SetStatus, "disconnected");
+            this.window.webContents.send(NetworkingStatus.SetConnectionStatus, "disconnected");
         };
 
         this.connection = new Connection(this.connectionId++, this.readyCallback, this.dataCallback, this.closeCallback, this.errorCallback);
     }
 
-    private processReceivedPacket(packet: NetworkingPacket) {
+    // TOdo, refactor this
+    private static processReceivedPacket(packet: NetworkingPacket): void {
         // Handle server responses
         if (packet.isServer) {
             if (packet.isResponse) {
@@ -154,7 +156,6 @@ export class NetworkManager {
 
                     case RequestType.Update:
                         break;
-
                 }
             }
 
@@ -195,12 +196,12 @@ export class NetworkManager {
             console.log("Networking | Received packet with no matching id - Ignoring");
     }
 
-    private checkConnectionId(id: number) {
+    private static checkConnectionId(id: number): void {
         if (id > this.activeConnectionId)
             this.activeConnectionId = id;
     }
 
-    send(event: any, requestType: RequestType, identifiers: string[], data: any[], sendUpdate: boolean = true) {
+    public static send(event: any, requestType: RequestType, identifiers: string[], data: any[], sendUpdate: boolean = true): void {
         if (!this.networkConnected || this.connection == undefined) {
             event.returnValue = undefined; //Return undefined because we are not connected
             return;
@@ -218,7 +219,7 @@ export class NetworkManager {
         });
     }
 
-    modifyConfig(hostname: string, port: number) {
+    public static modifyConfig(hostname: string, port: number): void {
         this.hostname = hostname;
         this.port = port;
 
@@ -226,12 +227,12 @@ export class NetworkManager {
         this.reconnect();
     }
 
-    connect() {
+    public static connect(): void {
         if (this.networkConnected || this.connection == undefined)
             return;
 
         console.log("Networking | Connecting");
-        this.window.webContents.send(NetworkingStatus.SetStatus, "connecting");
+        this.window.webContents.send(NetworkingStatus.SetConnectionStatus, "connecting");
 
         //Attempt to establish connection on specified port
         this.connection.connect(this.hostname, this.port, () => {
@@ -240,7 +241,7 @@ export class NetworkManager {
 
             this.networkConnected = true;
 
-            this.window.webContents.send(NetworkingStatus.SetStatus, "connected");
+            this.window.webContents.send(NetworkingStatus.SetConnectionStatus, "connected");
 
             // Flush away DataActionBuffer using the connection
             this.dataActionPacketBufferFlush();
@@ -253,7 +254,7 @@ export class NetworkManager {
         });
     }
 
-    disconnect() {
+    public static disconnect(): void {
         if (!this.networkConnected || this.connection == undefined) //Nothing to disconnect from if never connected
             return;
 
@@ -263,7 +264,7 @@ export class NetworkManager {
     }
 
     //Disconnects and reestablishes a connection, emitting a Reconnect event for views to refresh their data
-    reconnect() {
+    public static reconnect(): void {
         //Do not await for connection close if connection is already closed
         if (this.networkConnected && this.connection != undefined) {
             this.disconnect();
@@ -273,19 +274,39 @@ export class NetworkManager {
         }
     }
 
-    private reconnectConnection() {
+    private static reconnectConnection(): void {
         this.connection = new Connection(this.connectionId++, () => {
-            this.readyCallback(); //Check whether or not initial ready callback has ran,
-            this.window.webContents.send(NetworkOperation.Reconnect);
+            this.readyCallback(); //Check whether or not initial ready callback has ran
 
+            this.fetchViewData(() => {
+                // Send reconnect event
+                this.window.webContents.send(NetworkOperation.Reconnect);
+            });
         }, this.dataCallback, this.closeCallback, this.errorCallback);
         this.connect();
+    }
+
+    public static fetchViewData(completeCallback: () => void): void {
+        // Fetch view data
+        this.window.webContents.send(NetworkingStatus.SetStatusBarText, "Fetching data from server...");
+
+        // Event handler for this located in renderer.ts
+        this.window.webContents.send(NetworkOperation.ViewDataFetch);  // Emits event startup-fetch-view-data-success | or startup-fetch-view-data-failed
+
+        ipcMain.on(NetworkOperation.ViewDataFetchSuccess, () => {
+            this.window.webContents.send(NetworkingStatus.SetStatusBarText, "");
+            completeCallback();
+        });
+
+        ipcMain.on(NetworkOperation.ViewDataFetchFailure, () => {
+            this.window.webContents.send(NetworkingStatus.SetStatusBarText, "Fetching data from server timed out");
+        });
     }
 
     // Buffer methods
 
     // Adds the dataActionPacket to the beginning of the buffer
-    dataActionPacketBufferAdd(dataActionPacket: DataActionPacket): void {
+    public static dataActionPacketBufferAdd(dataActionPacket: DataActionPacket): void {
         // Possible pre-processing here?
         this.dataActionPacketBuffer.unshift(dataActionPacket);
 
@@ -295,7 +316,7 @@ export class NetworkManager {
     }
 
     // Attempts to write out and flush the dataActionPacket buffer
-    dataActionPacketBufferFlush(): void {
+    public static dataActionPacketBufferFlush(): void {
         if (!this.networkConnected || this.dataActionPacketBuffer.length <= 0)
             return;
 
@@ -318,7 +339,7 @@ export class NetworkManager {
 
     // Handle server responses from flushing the dataActionPacketBuffer
     // Removes packets from the dataActionPacketBuffer which has been acknowledged with a server response
-    private dataActionPacketResponse(packet: NetworkingPacket): void {
+    private static dataActionPacketResponse(packet: NetworkingPacket): void {
         if (packet.data == undefined || packet.requestType != RequestType.Post)
             return;
 

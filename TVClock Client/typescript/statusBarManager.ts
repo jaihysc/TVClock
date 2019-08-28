@@ -5,8 +5,8 @@ import {NetworkingStatus, NetworkOperation} from "./RequestTypes";
 
 //Handle the appearance of the status bar depending on networking condition
 export class StatusBarManager {
-    static addConnectionStatusElement(textElement: JQuery<HTMLElement>) {
-        ipcRenderer.on(NetworkingStatus.SetStatus, (event: any, data: string) => {
+    public static addConnectionStatusElement(textElement: JQuery<HTMLElement>) {
+        ipcRenderer.on(NetworkingStatus.SetConnectionStatus, (event: any, data: string) => {
             if (textElement == null)
                 return;
             switch (data) {
@@ -22,31 +22,38 @@ export class StatusBarManager {
                     textElement.html("Disconnected");
                     textElement.css("color", "darkgray");
                     break;
+
+                // Use user provided text as html if none is provided
                 default:
-                    console.log("An invalid networking-status was received");
+                    textElement.html(data);
+                    textElement.css("color", "white");
                     break;
             }
         });
     }
 }
+StatusBarManager.addConnectionStatusElement($("#connection-status"));
 
 //Networking button and text
 let connectionRefreshButton = $("#connection-refresh");
 
 //Handle connection bar refresh button clicks
 if (connectionRefreshButton != null) {
-    connectionRefreshButton.on("click", () =>
-    {
+    connectionRefreshButton.on("click", () => {
         //Send to main to retry networking
         ipcRenderer.send(NetworkOperation.Reconnect, true);
     });
 }
 
+// Status bar middle text
+let statusBarText = $("#status-bar-middle-text");
+
+ipcRenderer.on(NetworkingStatus.SetStatusBarText, (event: any, data: string) => {
+    statusBarText.text(data);
+});
 
 ipcRenderer.on(NetworkOperation.SetDisplayAddress, (event: any, data: {hostname: string; port: string}) => {
     if (data.hostname == "localhost")
         data.hostname = "127.0.0.1";
     $("#connected-server-address").html(`${data.hostname}:${data.port}`);
 });
-
-StatusBarManager.addConnectionStatusElement($("#connection-status"));
