@@ -43,7 +43,7 @@ async function createWindow() {
             port: String(NetworkManager.port)}
         );
 
-        NetworkManager.fetchViewData(() => {});
+        NetworkManager.fetchViewData();
     });
 }
 

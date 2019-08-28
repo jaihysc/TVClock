@@ -27,6 +27,8 @@ class ScheduleItemGeneric implements DataActionItem {
 }
 
 export class ScheduleViewManager implements IViewController {
+    viewIndex = 1;
+
     //List of all 24 scheduleItems
     scheduleItems: ScheduleItemGeneric[] = [];
     periodItems: ScheduleItemGeneric[] = [];
@@ -52,11 +54,18 @@ export class ScheduleViewManager implements IViewController {
     inputColor!: JQuery<HTMLElement>;
 
     initialize(): void {
+        ipcRenderer.on(NetworkOperation.Reconnect, () => {
+            this.selectedPeriodItemIndex = -1;
+            //Refresh the view
+            if (ViewManager.currentViewIndex == this.viewIndex)
+                $( ".nav-item a" )[this.viewIndex].click();
+        });
+
         //Networking updates
         ipcRenderer.on(Identifiers.scheduleItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
             DataActionFunctions.handleDataActionPacket(dataActionPackets, this.scheduleItems);
 
-            if (ViewManager.currentViewIndex == 1)
+            if (ViewManager.currentViewIndex == this.viewIndex)
                 this.refreshScheduleList();
         });
         ipcRenderer.on(Identifiers.periodItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
@@ -64,16 +73,10 @@ export class ScheduleViewManager implements IViewController {
 
             // Decrement selectedPeriodItemIndex if deleted item was the last element in array
             if (this.selectedPeriodItemIndex >= this.periodItems.length)
-                this.selectedPeriodItemIndex--;
+                this.selectedPeriodItemIndex = this.periodItems.length - 1;
 
-            if (ViewManager.currentViewIndex == 1)
+            if (ViewManager.currentViewIndex == this.viewIndex)
                 this.refreshPeriodList();
-        });
-
-        ipcRenderer.on(NetworkOperation.Reconnect, () => {
-            this.selectedPeriodItemIndex = -1;
-            //Refresh the view
-            $( ".nav-item a" )[1].click();
         });
     }
 

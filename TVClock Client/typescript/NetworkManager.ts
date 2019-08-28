@@ -82,10 +82,8 @@ export class NetworkManager {
         this.networkingId = 0;
 
         this.readyCallback = () => {
-            if (!this.readyCallbackUsed) {
-                this.readyCallbackUsed = true;
-                ready();
-            }
+            this.readyCallbackUsed = true;
+            ready();
         };
         this.dataCallback = (id: number, responseJson: string) => {
             if (responseJson == undefined || id < this.activeConnectionId) //Ignore old connection's events
@@ -276,17 +274,18 @@ export class NetworkManager {
 
     private static reconnectConnection(): void {
         this.connection = new Connection(this.connectionId++, () => {
-            this.readyCallback(); //Check whether or not initial ready callback has ran
-
-            this.fetchViewData(() => {
-                // Send reconnect event
-                this.window.webContents.send(NetworkOperation.Reconnect);
-            });
+            // Run ready callback only once
+            if (!this.readyCallbackUsed) {
+                this.readyCallback();
+            } else {
+                // Run this after the first successful connection
+                this.fetchViewData();
+            }
         }, this.dataCallback, this.closeCallback, this.errorCallback);
         this.connect();
     }
 
-    public static fetchViewData(completeCallback: () => void): void {
+    public static fetchViewData(): void {
         // Fetch view data
         this.window.webContents.send(NetworkingStatus.SetStatusBarText, "Fetching data from server...");
 
@@ -295,7 +294,7 @@ export class NetworkManager {
 
         ipcMain.on(NetworkOperation.ViewDataFetchSuccess, () => {
             this.window.webContents.send(NetworkingStatus.SetStatusBarText, "");
-            completeCallback();
+            this.window.webContents.send(NetworkOperation.Reconnect);
         });
 
         ipcMain.on(NetworkOperation.ViewDataFetchFailure, () => {

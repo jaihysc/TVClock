@@ -7,6 +7,8 @@ import {ScheduleViewManager} from "./view-scripts/schedule";
 import {SettingViewManager} from "./view-scripts/settings";
 
 export interface IViewController {
+    viewIndex: number;
+
     // Fetch view dependent data from server
     fetchDataFromServer(): void;
 
@@ -84,8 +86,5 @@ export class ViewManager {
                 viewControllers[i].load();
             });
         }
-
-        //Load the first view
-        buttonContainers[0].click();
     }
 }

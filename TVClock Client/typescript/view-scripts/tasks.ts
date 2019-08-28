@@ -28,6 +28,8 @@ class Task implements DataActionItem {
 }
 
 export class TodoViewManager implements IViewController {
+    viewIndex = 0;
+
     taskListTasks: Task[] = []; //Collection of tasks
     selectedTaskIndex = -1; //Index of current selected active task
     inEditMode = false; //Keep track of whether the edit button is in use or not
@@ -50,8 +52,9 @@ export class TodoViewManager implements IViewController {
             // Reinitialize the view
             this.selectedTaskIndex = -1;
 
-            //Refresh the view
-            $( ".nav-item a" )[0].click();
+            // Reload the view
+            if (ViewManager.currentViewIndex == this.viewIndex)
+                $( ".nav-item a" )[this.viewIndex].click();
         });
 
         //Networking Update request handler
@@ -64,9 +67,9 @@ export class TodoViewManager implements IViewController {
 
             // Decrement selectedTaskIndex if deleted item was the last element in array
             if (this.selectedTaskIndex >= this.taskListTasks.length)
-                this.selectedTaskIndex--;
+                this.selectedTaskIndex = this.taskListTasks.length - 1;
 
-            if (ViewManager.currentViewIndex == 0)
+            if (ViewManager.currentViewIndex == this.viewIndex)
                 this.updateTaskList();
         });
     }

@@ -7,6 +7,8 @@ import {IViewController} from "../viewManager";
 import {StringTags} from "../ViewCommon";
 
 export class SettingViewManager implements IViewController {
+    viewIndex = 2;
+
     networkingHostname!: JQuery<HTMLElement>;
     networkingPort!: JQuery<HTMLElement>;
     networkingUpdateBtn!: JQuery<HTMLElement>;
