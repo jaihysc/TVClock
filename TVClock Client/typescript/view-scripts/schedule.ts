@@ -1,12 +1,12 @@
 //Renderer
 //Manager for schedule view
 
-import { ipcRenderer } from "electron";
+import {ipcRenderer} from "electron";
 import invert from "invert-color";
-import {RequestType, NetworkOperation} from "../RequestTypes";
+import {NetworkOperation, RequestType} from "../RequestTypes";
 import {IViewController, ViewManager} from "../viewManager";
 import {StringTags, ViewCommon} from "../ViewCommon";
-import {DataAction, DataActionPacket} from "../NetworkManager";
+import {DataAction} from "../NetworkManager";
 import {DataActionItem, NetworkingFunctions} from "../NetworkingFunctions";
 import {DataActionFunctions} from "../DataActionFunctions";
 import {Identifiers} from "../Identifiers";
@@ -62,13 +62,13 @@ export class ScheduleViewManager implements IViewController {
         });
 
         //Networking updates
-        ipcRenderer.on(Identifiers.scheduleItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
+        ipcRenderer.on(Identifiers.scheduleItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: any[]) => {
             DataActionFunctions.handleDataActionPacket(dataActionPackets, this.scheduleItems);
 
             if (ViewManager.currentViewIndex == this.viewIndex)
                 this.refreshScheduleList();
         });
-        ipcRenderer.on(Identifiers.periodItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
+        ipcRenderer.on(Identifiers.periodItemsIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: any[]) => {
             DataActionFunctions.handleDataActionPacket(dataActionPackets, this.periodItems);
 
             // Decrement selectedPeriodItemIndex if deleted item was the last element in array
@@ -93,8 +93,12 @@ export class ScheduleViewManager implements IViewController {
         let periodData: ScheduleItemGeneric[] = JSON.parse(retrievedPeriodData.data)[0];
 
         // Process received data
-        this.updateScheduleItems(scheduleData);
-        this.updatePeriodItems(periodData);
+        this.scheduleItems = [];
+        for (let i = 0; i < scheduleData.length; ++i)
+            this.scheduleItems.push(new ScheduleItemGeneric(scheduleData[i].periodName, scheduleData[i].hour, scheduleData[i].color, scheduleData[i].hash));
+        this.periodItems = [];
+        for (let i = 0; i < periodData.length; ++i)
+            this.periodItems.push(new ScheduleItemGeneric(periodData[i].periodName, null, periodData[i].color, periodData[i].hash));
     }
 
     preload(): void {
@@ -240,93 +244,42 @@ export class ScheduleViewManager implements IViewController {
         });
     }
 
-    private updateScheduleItems(data: ScheduleItemGeneric[]): void {
-        this.scheduleItems = [];
-        for (let i = 0; i < data.length; ++i)
-            this.scheduleItems.push(new ScheduleItemGeneric(data[i].periodName, data[i].hour, data[i].color, data[i].hash));
-    }
-    private updatePeriodItems(data: ScheduleItemGeneric[]): void {
-        this.periodItems = [];
-        for (let i = 0; i < data.length; ++i)
-            this.periodItems.push(new ScheduleItemGeneric(data[i].periodName, null, data[i].color, data[i].hash));
-    }
-
-    private deselectAllPeriods(): void {
-        this.selectedPeriodItemIndex = -1;
-
-        let htmlPeriodItems = $(".list-period-item");
-        for (let i = 0; i < htmlPeriodItems.length; ++i)
-            ViewCommon.deselectListItem(htmlPeriodItems, i);
-    }
-
-    private timeTableAppend(item: ScheduleItemGeneric): void {
-        if (item.hour == null)
-            item.hour = "";
-
-        let newScheduleItemColumn1 = $("<div class='col-3'/>")
-            .text(item.hour);
-        let newScheduleItemColumn2 = $("<div class='col-9'/>")
-            .append(item.periodName); //Period name in scheduleItems will not need to be escaped as they are escaped earlier (hopefully)
-
-        let newScheduleItemRow = $("<div class='row'/>")
-            .append(newScheduleItemColumn1)
-            .append(newScheduleItemColumn2);
-
-        let newScheduleItem = $("<li class='list-group-item-darker list-group-flush list-time-item'/>");
-        newScheduleItem.append(newScheduleItemRow);
-
-        newScheduleItem.css("color", invert(item.color)); //Invert foreground color to stand out
-        newScheduleItem.css("background-color", "#" + item.color); //Set color
-        newScheduleItem.appendTo(this.scheduleItemContainer);
-    }
-
     //Refresh list
     private refreshScheduleList(): void {
         this.scheduleItemContainer.html(" "); //Clear old text
-        for (let i = 0; i < this.scheduleItems.length; ++i)
-            this.timeTableAppend(this.scheduleItems[i]);
+        for (let i = 0; i < this.scheduleItems.length; ++i) {
+            let item = this.scheduleItems[i];
+            if (item.hour == null)
+                item.hour = "";
+
+            let newScheduleItemColumn1 = $("<div class='col-3'/>")
+                .text(item.hour);
+            let newScheduleItemColumn2 = $("<div class='col-9'/>")
+                .append(item.periodName); //Period name in scheduleItems will not need to be escaped as they are escaped earlier (hopefully)
+
+            let newScheduleItemRow = $("<div class='row'/>")
+                .append(newScheduleItemColumn1)
+                .append(newScheduleItemColumn2);
+
+            let newScheduleItem = $("<li class='list-group-item-darker list-group-flush list-time-item'/>");
+            newScheduleItem.append(newScheduleItemRow);
+
+            newScheduleItem.css("color", invert(item.color)); //Invert foreground color to stand out
+            newScheduleItem.css("background-color", "#" + item.color); //Set color
+            newScheduleItem.appendTo(this.scheduleItemContainer);
+        }
 
         //Setup schedule item click handlers
         let htmlScheduleItems = $(".list-time-item");
         for (let i = 0; i < htmlScheduleItems.length; ++i) {
             htmlScheduleItems[i].addEventListener("click", () => {
-                this.periodConfigurationMenu.hide();
-
-                if (this.selectedScheduleItemIndex >= 0)
-                    ViewCommon.deselectListItem(htmlScheduleItems, this.selectedScheduleItemIndex);
-
-                //If clicking the same item, unselect it
-                if (this.selectedScheduleItemIndex == i) {
-                    this.selectedScheduleItemIndex = -1;
-                    this.scheduleItemSelected = false;
-
-                    this.deselectAllPeriods();
-                } else {
-                    this.selectedScheduleItemIndex = i;
-                    ViewCommon.selectListItem(htmlScheduleItems, i);
-                    //Select scheduleItem item associated with the schedule
-                    this.scheduleItemSelected = true;
-                    let htmlPeriodItems = $(".list-period-item");
-
-                    //Select the period item matching the schedule item
-                    for (let j = 0; j < htmlPeriodItems.length; ++j) {
-                        //Find the desired period based on provided periodName
-                        if (htmlPeriodItems[j].innerHTML == this.scheduleItems[i].periodName) {
-                            //If it is found, select it if it is not already selected
-                            if (j == this.selectedPeriodItemIndex)
-                                return;
-
-                            htmlPeriodItems[j].click();
-                        }
-                    }
-                }
+                this.selectScheduleItem(i);
             })
         }
         //Select the previously selected task
         if (this.selectedScheduleItemIndex >= 0)
             ViewCommon.selectListItem(htmlScheduleItems, this.selectedScheduleItemIndex);
     }
-
     private refreshPeriodList(): void {
         this.periodItemContainer.html(""); //Clear old text
 
@@ -343,55 +296,101 @@ export class ScheduleViewManager implements IViewController {
         //Period clickable functionality
         for (let i = 0; i < htmlPeriodItems.length; ++i) {
             htmlPeriodItems[i].addEventListener("click", () => {
-                this.exitEditMode(); //Stop editing after clicking on another item
-
-                //Set clicked button as active
-                if (this.selectedPeriodItemIndex >= 0)
-                    ViewCommon.deselectListItem(htmlPeriodItems, this.selectedPeriodItemIndex);
-
-                // Allow unselecting of period items only when configuring periods
-                if (!this.scheduleItemSelected && this.selectedPeriodItemIndex == i) {
-                    this.selectedPeriodItemIndex = -1;
-                    this.periodConfigurationMenu.hide();
-                } else {
-                    this.selectedPeriodItemIndex = i;
-                    ViewCommon.selectListItem(htmlPeriodItems, this.selectedPeriodItemIndex);
-
-                    //Allow choosing period of a scheduleItem if a scheduleItem is selected
-                    if (this.scheduleItemSelected) {
-                        //Set the value of the scheduleItem to the period
-                        this.scheduleItems[this.selectedScheduleItemIndex].periodName = this.periodItems[this.selectedPeriodItemIndex].periodName;
-                        this.scheduleItems[this.selectedScheduleItemIndex].color = this.periodItems[this.selectedPeriodItemIndex].color;
-
-                        // Send edits to the period of a scheduleItem
-                        NetworkingFunctions.sendDataActionPacket(
-                            DataAction.Edit,
-                            Identifiers.scheduleItemsIdentifier,
-                            this.scheduleItems[this.selectedScheduleItemIndex].hash,
-                            this.scheduleItems[this.selectedScheduleItemIndex]
-                        );
-
-                        //Refresh for text changes to the schedule list to show up
-                        this.periodConfigurationMenu.hide();
-                        this.refreshScheduleList();
-                    } else { //Otherwise show the configuration menu for periods
-                        this.periodConfigurationMenu.show();
-                    }
-
-                    //Do not show configuration menu for default period
-                    if (this.selectedPeriodItemIndex == 0)
-                        this.periodConfigurationMenu.hide();
-                }
+                this.selectPeriodItem(i, true);
             })
         }
 
         //Select the previously selected period
         if (this.selectedPeriodItemIndex >= 0)
             ViewCommon.selectListItem(htmlPeriodItems, this.selectedPeriodItemIndex);
-        //Do not show default period configuration, "None"
+        //Do not show configuration for default period, "None"
         if (this.selectedPeriodItemIndex == 0)
             this.periodConfigurationMenu.hide();
     }
+
+    // List click methods
+    private selectScheduleItem(index: number) {
+        this.periodConfigurationMenu.hide();
+
+        let htmlScheduleItems = $(".list-time-item");
+        if (this.selectedScheduleItemIndex >= 0)
+            ViewCommon.deselectListItem(htmlScheduleItems, this.selectedScheduleItemIndex);
+
+        //If clicking the same item, unselect it
+        if (this.selectedScheduleItemIndex == index) {
+            this.selectedScheduleItemIndex = -1;
+            this.selectedPeriodItemIndex = -1;
+
+            this.scheduleItemSelected = false;
+
+            let htmlPeriodItems = $(".list-period-item");
+            for (let i = 0; i < htmlPeriodItems.length; ++i)
+                ViewCommon.deselectListItem(htmlPeriodItems, i);
+
+        } else {
+            this.selectedScheduleItemIndex = index;
+            ViewCommon.selectListItem(htmlScheduleItems, index);
+            //Select scheduleItem item associated with the schedule
+            this.scheduleItemSelected = true;
+            let htmlPeriodItems = $(".list-period-item");
+
+            //Select the period item matching the schedule item
+            for (let j = 0; j < htmlPeriodItems.length; ++j) {
+                //Find the desired period based on provided periodName
+                if (htmlPeriodItems[j].innerHTML == this.scheduleItems[index].periodName) {
+                    //If it is found, select it if it is not already selected
+                    if (j == this.selectedPeriodItemIndex)
+                        return;
+
+                    this.selectPeriodItem(j, false);
+                }
+            }
+        }
+    }
+    private selectPeriodItem(index: number, sendNetworkingEdit: boolean) {
+        this.exitEditMode(); //Stop editing after clicking on another item
+
+        // Deselect previous PeriodItem
+        let htmlPeriodItems = $(".list-period-item");
+        if (this.selectedPeriodItemIndex >= 0)
+            ViewCommon.deselectListItem(htmlPeriodItems, this.selectedPeriodItemIndex);
+
+        // Allow unselecting of period items only when configuring periods
+        if (!this.scheduleItemSelected && this.selectedPeriodItemIndex == index) {
+            this.selectedPeriodItemIndex = -1;
+            this.periodConfigurationMenu.hide();
+        } else {
+            this.selectedPeriodItemIndex = index;
+            ViewCommon.selectListItem(htmlPeriodItems, this.selectedPeriodItemIndex);
+
+            //Allow choosing period of a scheduleItem if a scheduleItem is selected
+            if (this.scheduleItemSelected) {
+                //Set the value of the scheduleItem to the period
+                this.scheduleItems[this.selectedScheduleItemIndex].periodName = this.periodItems[this.selectedPeriodItemIndex].periodName;
+                this.scheduleItems[this.selectedScheduleItemIndex].color = this.periodItems[this.selectedPeriodItemIndex].color;
+
+                // Send edits to the period of a scheduleItem
+                if (sendNetworkingEdit)
+                    NetworkingFunctions.sendDataActionPacket(
+                        DataAction.Edit,
+                        Identifiers.scheduleItemsIdentifier,
+                        this.scheduleItems[this.selectedScheduleItemIndex].hash,
+                        this.scheduleItems[this.selectedScheduleItemIndex]
+                    );
+
+                //Refresh for text changes to the schedule list to show up
+                this.periodConfigurationMenu.hide();
+                this.refreshScheduleList();
+            } else { //Otherwise show the configuration menu for periods
+                this.periodConfigurationMenu.show();
+            }
+
+            //Do not show configuration menu for default period
+            if (this.selectedPeriodItemIndex == 0)
+                this.periodConfigurationMenu.hide();
+        }
+    }
+
 
     private exitEditMode(): void {
         if (!this.editingPeriod)

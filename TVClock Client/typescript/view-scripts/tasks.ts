@@ -6,7 +6,7 @@ import {NetworkOperation, RequestType} from "../RequestTypes";
 import {IViewController, ViewManager} from "../viewManager";
 import {StringTags, ViewCommon} from "../ViewCommon";
 import {DataActionItem, NetworkingFunctions} from "../NetworkingFunctions";
-import {DataAction, DataActionPacket} from "../NetworkManager";
+import {DataAction} from "../NetworkManager";
 import {DataActionFunctions} from "../DataActionFunctions";
 import {Identifiers} from "../Identifiers";
 
@@ -58,7 +58,7 @@ export class TodoViewManager implements IViewController {
         });
 
         //Networking Update request handler
-        ipcRenderer.on(Identifiers.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
+        ipcRenderer.on(Identifiers.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: any[]) => {
             let tasks: Task[]  = DataActionFunctions.handleDataActionPacket(dataActionPackets, this.taskListTasks) as Task[];
             for (let task of tasks) {
                 task.startDate = new Date(task.startDate);
@@ -77,7 +77,17 @@ export class TodoViewManager implements IViewController {
     fetchDataFromServer(): void {
         // Fetch and store data from server to localstorage
         let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [Identifiers.tasksIdentifier]});
-        this.updateTasks(JSON.parse(jsonData.data)[0]);  // Parse return data into this.taskListTasks
+
+        if (JSON.parse(jsonData.data)[0] != undefined)
+            return;
+
+        this.taskListTasks = []; //Clear tasks first
+        for (let i = 0; i < JSON.parse(jsonData.data)[0].length; ++i) {
+            if (JSON.parse(jsonData.data)[0][i] == undefined)
+                continue;
+            //Reconvert date text into date
+            this.taskListTasks.push(new Task(JSON.parse(jsonData.data)[0][i].text, new Date(JSON.parse(jsonData.data)[0][i].startDate), new Date(JSON.parse(jsonData.data)[0][i].endDate), JSON.parse(jsonData.data)[0][i].priority, JSON.parse(jsonData.data)[0][i].hash));
+        }
     }
 
     preload(): void {
@@ -230,18 +240,6 @@ export class TodoViewManager implements IViewController {
             else
                 hash = NetworkingFunctions.createHash(new Date().getTime() + taskText);
             return new Task(taskText, new Date(startDate), new Date(endDate), priority, hash);
-        }
-    }
-
-    private updateTasks(data: Task[]): void {
-        this.taskListTasks = []; //Clear tasks first
-        if (data != undefined) {
-            for (let i = 0; i < data.length; ++i) {
-                if (data[i] == undefined)
-                    continue;
-                //Reconvert date text into date
-                this.taskListTasks.push(new Task(data[i].text, new Date(data[i].startDate), new Date(data[i].endDate), data[i].priority, data[i].hash));
-            }
         }
     }
 
