@@ -59,8 +59,8 @@ export class TodoViewManager implements IViewController {
 
         //Networking Update request handler
         ipcRenderer.on(Identifiers.tasksIdentifier + StringTags.NetworkingUpdateEvent, (event: any, dataActionPackets: DataActionPacket[]) => {
-            let task: Task | undefined = DataActionFunctions.handleDataActionPacket(dataActionPackets, this.taskListTasks) as Task;
-            if (task != undefined) {
+            let tasks: Task[]  = DataActionFunctions.handleDataActionPacket(dataActionPackets, this.taskListTasks) as Task[];
+            for (let task of tasks) {
                 task.startDate = new Date(task.startDate);
                 task.endDate = new Date(task.endDate);
             }

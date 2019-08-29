@@ -162,13 +162,27 @@ export class NetworkManager {
                 if (packet.dataIdentifiers == undefined || packet.data == undefined)
                     return;
 
-                let dataItems: any = JSON.parse(packet.data);
+                let packetItems: any[] = JSON.parse(packet.data);
+
+                // Store each dataItem in a under its dataIdentifier, flush it at the end
+                let identifierDataItems: Record<string, any[]> = {};
+
                 for (let i = 0; i < packet.dataIdentifiers.length; ++i) {
+                    // Initialize if empty
+                    if (identifierDataItems[packet.dataIdentifiers[i]] == undefined)
+                        identifierDataItems[packet.dataIdentifiers[i]] = [];
+
+                    identifierDataItems[packet.dataIdentifiers[i]].push(packetItems[i]);
+                }
+
+
+                for (let dataIdentifier in identifierDataItems) {
                     //Update requests will use the channel specified by dataIdentifiers with "-update" appended at the end
                     //schedule-view-scheduleItems would become schedule-view-scheduleItems-update
                     this.window.webContents.send(
-                        packet.dataIdentifiers[i] + StringTags.NetworkingUpdateEvent, dataItems);
+                        dataIdentifier + StringTags.NetworkingUpdateEvent, identifierDataItems[dataIdentifier]);
                 }
+
                 return;
             }
         }
@@ -306,12 +320,23 @@ export class NetworkManager {
 
     // Adds the dataActionPacket to the beginning of the buffer
     public static dataActionPacketBufferAdd(dataActionPacket: DataActionPacket): void {
-        // Possible pre-processing here?
-        this.dataActionPacketBuffer.unshift(dataActionPacket);
+        let overriddenPacket = false;
+        // Check if item with same hash already exists in buffer, is so, override it
+        for (let i = 0; i < this.dataActionPacketBuffer.length; ++i) {
+            if (this.dataActionPacketBuffer[i].hash == dataActionPacket.hash) {
+                // If original DataAction is Add, keep it
+                if (this.dataActionPacketBuffer[i].dataAction == DataAction.Add && dataActionPacket.dataAction == DataAction.Edit)
+                    dataActionPacket.dataAction = DataAction.Add;
+
+                this.dataActionPacketBuffer[i] = dataActionPacket;
+                overriddenPacket = true;
+            }
+        }
+
+        if (!overriddenPacket)
+            this.dataActionPacketBuffer.unshift(dataActionPacket);
 
         this.dataActionPacketBufferFlush();
-
-        console.log("DataActionPacket has been inserted. Hash:" + dataActionPacket.hash);
     }
 
     // Attempts to write out and flush the dataActionPacket buffer

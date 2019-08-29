@@ -4,24 +4,29 @@ import {DataAction, DataActionPacket} from "./NetworkManager";
 export class DataActionFunctions {
     // Dispatches DataActionsPackets to make their appropriate modifications to the targetArray
     // Returns the item inheriting the DataActionItem class which was modified, undefined if nothing was modified
-    public static handleDataActionPacket(dataActionPackets: DataActionPacket[], targetArray: DataActionItem[]): DataActionItem | undefined {
+    public static handleDataActionPacket(dataActionPackets: DataActionPacket[], targetArray: DataActionItem[]): DataActionItem[] {
+        let returnItems: DataActionItem[] = [];
         for (let dataActionPacket of dataActionPackets) {
+            let returnedItem: DataActionItem | undefined;
             switch (dataActionPacket.dataAction) {
                 case DataAction.Add:
-                    return this.add(targetArray, JSON.parse(dataActionPacket.dataJson));
+                    returnedItem = this.add(targetArray, JSON.parse(dataActionPacket.dataJson));
                     break;
 
                 case DataAction.Edit:
-                    return this.edit(targetArray, JSON.parse(dataActionPacket.dataJson));
+                    returnedItem = this.edit(targetArray, JSON.parse(dataActionPacket.dataJson));
                     break;
 
                 case DataAction.Remove:
                     this.remove(targetArray, dataActionPacket.hash);
                     break;
             }
+
+            if (returnedItem != undefined)
+                returnItems.push(returnedItem);
         }
 
-        return undefined;
+        return returnItems;
     }
 
     // These are copies of the methods on the server side
