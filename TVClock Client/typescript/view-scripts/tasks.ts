@@ -76,17 +76,17 @@ export class TodoViewManager implements IViewController {
 
     fetchDataFromServer(): void {
         // Fetch and store data from server to localstorage
-        let jsonData = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [Identifiers.tasksIdentifier]});
+        let returnJsonArray: string[] = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [Identifiers.tasksIdentifier]});
 
-        if (JSON.parse(jsonData.data)[0] != undefined)
+        // Response should be the first element within the response data array
+        let retrievedTasks = JSON.parse(returnJsonArray[0]);
+        if (retrievedTasks == undefined)
             return;
 
         this.taskListTasks = []; //Clear tasks first
-        for (let i = 0; i < JSON.parse(jsonData.data)[0].length; ++i) {
-            if (JSON.parse(jsonData.data)[0][i] == undefined)
-                continue;
+        for (let task of retrievedTasks) {
             //Reconvert date text into date
-            this.taskListTasks.push(new Task(JSON.parse(jsonData.data)[0][i].text, new Date(JSON.parse(jsonData.data)[0][i].startDate), new Date(JSON.parse(jsonData.data)[0][i].endDate), JSON.parse(jsonData.data)[0][i].priority, JSON.parse(jsonData.data)[0][i].hash));
+            this.taskListTasks.push(new Task(task.text, new Date(task.startDate), new Date(task.endDate), task.priority, task.hash));
         }
     }
 

@@ -82,23 +82,24 @@ export class ScheduleViewManager implements IViewController {
 
     fetchDataFromServer(): void {
         //Fetch schedule and periodItems on startup or refresh
-        let retrievedScheduleIData = ipcRenderer.sendSync(
-            NetworkOperation.Send,
-            {requestType: RequestType.Get, identifiers: [Identifiers.scheduleItemsIdentifier]});
-        let retrievedPeriodData = ipcRenderer.sendSync(
-            NetworkOperation.Send,
-            {requestType: RequestType.Get, identifiers: [Identifiers.periodItemsIdentifier]});
+        let retrievedScheduleData: string[]  = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [Identifiers.scheduleItemsIdentifier]});
+        let retrievedPeriodData: string[]  = ipcRenderer.sendSync(NetworkOperation.Send, {requestType: RequestType.Get, identifiers: [Identifiers.periodItemsIdentifier]});
 
-        let scheduleData: ScheduleItemGeneric[] = JSON.parse(retrievedScheduleIData.data)[0];
-        let periodData: ScheduleItemGeneric[] = JSON.parse(retrievedPeriodData.data)[0];
+        // Response should be the first element within the response data array
+        let retrievedScheduleItems: ScheduleItemGeneric[] = JSON.parse(retrievedScheduleData[0]);
+        let retrievedPeriodItems: ScheduleItemGeneric[] = JSON.parse(retrievedPeriodData[0]);
 
         // Process received data
+        // retrievedScheduleItems should never be null
         this.scheduleItems = [];
-        for (let i = 0; i < scheduleData.length; ++i)
-            this.scheduleItems.push(new ScheduleItemGeneric(scheduleData[i].periodName, scheduleData[i].hour, scheduleData[i].color, scheduleData[i].hash));
-        this.periodItems = [];
-        for (let i = 0; i < periodData.length; ++i)
-            this.periodItems.push(new ScheduleItemGeneric(periodData[i].periodName, null, periodData[i].color, periodData[i].hash));
+        for (let scheduleItem of retrievedScheduleItems)
+            this.scheduleItems.push(new ScheduleItemGeneric(scheduleItem.periodName, scheduleItem.hour, scheduleItem.color, scheduleItem.hash));
+
+        if (retrievedPeriodItems != undefined) {
+            this.periodItems = [];
+            for (let periodItem of retrievedPeriodItems)
+                this.periodItems.push(new ScheduleItemGeneric(periodItem.periodName, null, periodItem.color, periodItem.hash));
+        }
     }
 
     preload(): void {

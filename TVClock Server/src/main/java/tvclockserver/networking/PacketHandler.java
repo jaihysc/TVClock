@@ -40,14 +40,12 @@ public class PacketHandler implements IMessageReceived {
                 break;
 
             case Get: //GET request from client
-                ArrayList<Object> returnData = new ArrayList<>();
+                ArrayList<String> returnData = new ArrayList<>();
                 for (String identifier : receivedPacket.dataIdentifiers) {
-                    returnData.add(retrieveData(identifier));
+                    returnData.add(gson.toJson(retrieveData(identifier)));
                 }
 
-                Gson gson = new Gson();
-                Packet returnPacket = new Packet(
-                        RequestType.Get, gson.toJson(returnData), receivedPacket.dataIdentifiers, receivedPacket.id, true);
+                Packet returnPacket = new Packet(RequestType.Get, returnData.toArray(new String[0]), receivedPacket.dataIdentifiers, receivedPacket.id, true);
 
                 connection.sendMessage(gson.toJson(returnPacket, Packet.class));
                 break;
@@ -55,11 +53,16 @@ public class PacketHandler implements IMessageReceived {
     }
 
     public static void sendDataActionPackets(DataActionPacket[] dataActionPackets, String[] dataIdentifiers) {
-        sendUpdateRequest(gson.toJson(dataActionPackets), dataIdentifiers, null);
+        // Convert dataActionPackets into a string array instead with the dataActionPackets serialized
+        ArrayList<String> serializedPackets = new ArrayList<>();
+        for (DataActionPacket packet : dataActionPackets)
+            serializedPackets.add(gson.toJson(packet));
+
+        sendUpdateRequest(serializedPackets.toArray(new String[0]), dataIdentifiers, null);
     }
 
     // Helper methods
-    private static void sendUpdateRequest(String data, String[] dataIdentifiers, Connection[] excludedConnections) {
+    private static void sendUpdateRequest(String[] data, String[] dataIdentifiers, Connection[] excludedConnections) {
         Packet updatePacket = new Packet(RequestType.Update, data, dataIdentifiers, false);
 
         if (excludedConnections == null)
@@ -100,9 +103,7 @@ public class PacketHandler implements IMessageReceived {
      * @param json Value of new data
      * @param identifiers Target data identifiers
      */
-    private static void updateData(String json, String[] identifiers) {
-        // Todo, convert data to a string array instead for efficiency, thus I do not need to deserialize the entire array each iteration
-
+    private static void updateData(String[] json, String[] identifiers) {
         int i = 0;
         //Json can be deserialized into string array, and assigned to identifiers in this loop
         for (String identifier : identifiers) {
@@ -110,17 +111,17 @@ public class PacketHandler implements IMessageReceived {
                 case ApplicationDataIdentifier.taskItems:
                 case ApplicationDataIdentifier.scheduleItems:
                 case ApplicationDataIdentifier.periodItems:
-                    updateListData(identifier, gson.fromJson(json, DataActionPacket[].class)[i]);
+                    updateListData(identifier, gson.fromJson(json[i], DataActionPacket.class));
                     break;
 
                 case ApplicationDataIdentifier.openWeatherMapKey:
-                    ApplicationData.openWeatherMapKey = gson.fromJson(json, String[].class)[i];
+                    ApplicationData.openWeatherMapKey = gson.fromJson(json[i], String.class);
                     break;
                 case ApplicationDataIdentifier.googleDocsDocumentId:
-                    ApplicationData.googleDocsDocumentId = gson.fromJson(json, String[].class)[i];
+                    ApplicationData.googleDocsDocumentId = gson.fromJson(json[i], String.class);
                     break;
                 case ApplicationDataIdentifier.openWeatherMapLocationCity:
-                    ApplicationData.openWeatherMapLocationCity = gson.fromJson(json, String[].class)[i];
+                    ApplicationData.openWeatherMapLocationCity = gson.fromJson(json[i], String.class);
                     break;
             }
             i++;
