@@ -154,6 +154,9 @@ public class Controller implements Initializable {
     }
 
     //Fetch task list information
+    private int lastTaskListSize = 0;
+    private MediaPlayer taskAddedChimeMediaPlayer = new MediaPlayer(new Media(getClass().getResource("/tvclockserver/task_added.wav").toExternalForm()));
+
     private void initializeTaskList() {
         taskList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -195,8 +198,10 @@ public class Controller implements Initializable {
                     timeLabelSmall.setVisible(false);
                     timeLabelSmall.setManaged(false);
 
+                    lastTaskListSize = 0;
                     return;
                 } else {
+                    // Task list visible
                     if (taskListSplitPaneClosed) {
                         taskListSplitPaneClosed = false;
 
@@ -221,6 +226,14 @@ public class Controller implements Initializable {
                     else
                         taskList.getItems().add(TaskListManager.wrapText(item.text, wrapCharacter));
                 }
+
+                // Play chime sound if new item is added to the task list
+                if (currentTasks.size() > lastTaskListSize) {
+                    taskAddedChimeMediaPlayer.stop();
+                    taskAddedChimeMediaPlayer.play();
+                }
+
+                lastTaskListSize = currentTasks.size();
             }
         }), new KeyFrame(Duration.seconds(10)));
 
@@ -269,7 +282,7 @@ public class Controller implements Initializable {
     }
 
     private int lastHour = 0;
-    private MediaPlayer mediaPlayer = new MediaPlayer(new Media(getClass().getResource("/tvclockserver/hourChime.wav").toExternalForm()));
+    private MediaPlayer hourChimeMediaPlayer = new MediaPlayer(new Media(getClass().getResource("/tvclockserver/hourChime.wav").toExternalForm()));
 
     /**
      * Updates the time and date on screen to the current system time
@@ -287,8 +300,8 @@ public class Controller implements Initializable {
 
             //Loads the hour chime and plays it on every hour
             if (lastHour != LocalDateTime.now().getHour()) {
-                mediaPlayer.stop(); //Stop to reset the file to the beginning before playing again
-                mediaPlayer.play();
+                hourChimeMediaPlayer.stop(); //Stop to reset the file to the beginning before playing again
+                hourChimeMediaPlayer.play();
                 lastHour = LocalDateTime.now().getHour();
             }
         }), new KeyFrame(Duration.millis(500)));
