@@ -58,7 +58,7 @@ export class SettingViewManager implements IViewController {
             this.validateAPIField(this.openWeatherMapLocationCity, StringTags.OpenWeatherMapLocationCity, postIdentifiers, postFields);
 
             if (postIdentifiers.length > 0)
-                ipcRenderer.send(NetworkOperation.Send, {requestType: RequestType.Post, identifiers: postIdentifiers, data: postFields, sendUpdate: false});
+                ipcRenderer.send(NetworkOperation.Send, {requestType: RequestType.Post, identifiers: postIdentifiers, data: postFields, sendUpdate: false, sendResponse: false});
         })
     }
 

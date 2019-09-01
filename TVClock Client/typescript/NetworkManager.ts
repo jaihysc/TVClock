@@ -18,14 +18,16 @@ class NetworkingPacket {
     timestamp: number | undefined;
     id: number; //Used for identifying the response, which will be on the same id
     sendUpdate: boolean; //Whether or not the server should send a update request to other connect clients
+    sendResponse: boolean; // Whether or not the server should respond to this packet
 
-    constructor(requestType: RequestType, data: string[], dataIdentifiers: string[], timestamp: number, id: number, sendUpdate: boolean = true) {
+    constructor(requestType: RequestType, data: string[], dataIdentifiers: string[], timestamp: number, id: number, sendUpdate: boolean, sendResponse: boolean) {
         this.requestType = requestType;
         this.data = data;
         this.dataIdentifiers = dataIdentifiers;
         this.timestamp = timestamp;
         this.id = id;
         this.sendUpdate = sendUpdate;
+        this.sendResponse = sendResponse;
     }
 }
 
@@ -206,7 +208,7 @@ export class NetworkManager {
             this.activeConnectionId = id;
     }
 
-    public static send(event: any, requestType: RequestType, identifiers: string[], data: any[], sendUpdate: boolean = true): void {
+    public static send(event: any, requestType: RequestType, identifiers: string[], data: any[], sendUpdate: boolean, sendResponse: boolean): void {
         if (!this.networkConnected || this.connection == undefined) {
             event.returnValue = undefined; //Return undefined because we are not connected
             return;
@@ -218,7 +220,7 @@ export class NetworkManager {
         this.queuedRequests.push({id: id, event: event});
 
         //Serialize into json string and send it to the server
-        let str = JSON.stringify(new NetworkingPacket(requestType, data, identifiers, Date.now(), id, sendUpdate));
+        let str = JSON.stringify(new NetworkingPacket(requestType, data, identifiers, Date.now(), id, sendUpdate, sendResponse));
         this.connection.sendString(str, () => {
             console.log("Networking | Sent: " + str);
         });
@@ -346,7 +348,7 @@ export class NetworkManager {
             dataIdentifiers.push(dataActionPacket.dataIdentifier);
         }
 
-        let packet = new NetworkingPacket(RequestType.Post, data, dataIdentifiers, Date.now(), -1, true);
+        let packet = new NetworkingPacket(RequestType.Post, data, dataIdentifiers, Date.now(), -1, true, true);
 
         let packetString = JSON.stringify(packet);
         this.connection.sendString(packetString, () => {

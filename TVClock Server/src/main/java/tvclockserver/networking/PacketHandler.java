@@ -28,7 +28,8 @@ public class PacketHandler implements IMessageReceived {
                 updateData(receivedPacket.data, receivedPacket.dataIdentifiers);
 
                 // Send reply to packet sender acknowledging reception of packet
-                sendResponsePacket(receivedPacket, connection);
+                if (receivedPacket.sendResponse)
+                    sendResponsePacket(receivedPacket, connection);
 
                 // Forward post contents via UPDATE out to all clients INCLUDING the one which sent the post request
                 // This is done for offline networking, so when the client's data gets overridden with server data

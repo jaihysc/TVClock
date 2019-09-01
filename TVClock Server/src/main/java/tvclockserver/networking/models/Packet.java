@@ -9,6 +9,7 @@ public class Packet {
     public long timestamp;
     public long id;
     public boolean sendUpdate;
+    public boolean sendResponse;
 
     public Packet(RequestType requestType, String[] data, String[] dataIdentifiers, boolean isResponse) {
         this.requestType = requestType;

@@ -56,8 +56,13 @@ function initializeNetworking(readyCallback: () => void): void {
     });
 
     //Sends specified identifiers with RequestType and returns the response
-    ipcMain.on(NetworkOperation.Send, (event: any, args: { requestType: RequestType; identifiers: any[]; data: any[]; sendUpdate: boolean}) => {
-        NetworkManager.send(event, args.requestType, args.identifiers, args.data, args.sendUpdate);
+    ipcMain.on(NetworkOperation.Send, (event: any, args: { requestType: RequestType; identifiers: any[]; data: any[]; sendUpdate: boolean; sendResponse: boolean}) => {
+        if (args.sendUpdate == undefined)
+            args.sendUpdate = true;
+        if (args.sendResponse == undefined)
+            args.sendResponse = true;
+
+        NetworkManager.send(event, args.requestType, args.identifiers, args.data, args.sendUpdate, args.sendResponse);
     });
 
     ipcMain.on(NetworkOperation.DataActionPacketBufferAdd, (event: any, args: { dataActionPacket: DataActionPacket }) => {
