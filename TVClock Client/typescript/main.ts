@@ -2,6 +2,14 @@ import {app, BrowserWindow, ipcMain} from "electron";
 import {DataActionPacket, NetworkManager} from "./NetworkManager";
 import {NetworkingStatus, NetworkOperation, RequestType} from "./RequestTypes";
 
+// Command line arguments
+for (let arg of process.argv) {
+    switch (arg) {
+        case "-d":  // -d Enables debug logging
+            NetworkManager.debugLog = true;
+    }
+}
+
 let mainWindow: BrowserWindow;
 
 async function createWindow() {

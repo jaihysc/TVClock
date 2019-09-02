@@ -52,6 +52,8 @@ export class DataActionPacket {
 }
 
 export class NetworkManager {
+    public static debugLog: boolean;  // Logs lengthy networking messages to the console for debugging
+
     private static window: BrowserWindow;
     private static connection: Connection;
 
@@ -96,14 +98,14 @@ export class NetworkManager {
             // They often get chained when a DataActionPacket response and an update request are sent by the server in rapid succession
             let responses: string[] = responseJson.toString().split('\n');
             responses.pop();  // .split() Always seems to create 1 additional blank element
-            console.log("Networking | Received [" + responses.length + "]: " + responseJson);
+            this.logMessage("Networking | Received [" + responses.length + "]: " + responseJson);
 
             let packets: NetworkingPacket[] = [];
             for (let str of responses)
                 try {
                     packets.push(JSON.parse(str));
                 } catch (e) {
-                    // console.log("Networking | Error handling received message: " + e);  // Prints false positive error message at times if there are extra newline characters
+                    // this.logMessage("Networking | Error handling received message: " + e);  // Prints false positive error message at times if there are extra newline characters
                 }
 
             for (let packet of packets)
@@ -114,11 +116,11 @@ export class NetworkManager {
                 return;
             this.checkConnectionId(id);
 
-            console.log("Networking | Connection closed");
+            this.logMessage("Networking | Connection closed");
             try {
                 this.window.webContents.send(NetworkingStatus.SetConnectionStatus, "disconnected");
             } catch {
-                console.log("Networking | Connection closed, failed to send disconnect status");
+                this.logMessage("Networking | Connection closed, failed to send disconnect status");
             }
         };
         this.errorCallback = (id: number, str: string) => {
@@ -126,7 +128,7 @@ export class NetworkManager {
                 return;
             this.checkConnectionId(id);
 
-            console.log("Networking | " + str);
+            this.logMessage("Networking | " + str);
             this.disconnect();
 
             //Return null to all networking-send events
@@ -174,7 +176,7 @@ export class NetworkManager {
         }
 
         if (!foundId && packet.id != -1)
-            console.log("Networking | Received packet with no matching id - Ignoring");
+            this.logMessage("Networking | Received packet with no matching id - Ignoring");
     }
     private static handleUpdateRequest(packet: NetworkingPacket): void {
         if (packet.dataIdentifiers == undefined || packet.data == undefined)
@@ -222,7 +224,7 @@ export class NetworkManager {
         //Serialize into json string and send it to the server
         let str = JSON.stringify(new NetworkingPacket(requestType, data, identifiers, Date.now(), id, sendUpdate, sendResponse));
         this.connection.sendString(str, () => {
-            console.log("Networking | Sent: " + str);
+            this.logMessage("Networking | Sent: " + str);
         });
     }
 
@@ -238,12 +240,12 @@ export class NetworkManager {
         if (this.networkConnected || this.connection == undefined)
             return;
 
-        console.log("Networking | Connecting");
+        this.logMessage("Networking | Connecting");
         this.window.webContents.send(NetworkingStatus.SetConnectionStatus, "connecting");
 
         //Attempt to establish connection on specified port
         this.connection.connect(this.hostname, this.port, () => {
-            console.log("Networking | Connection established");
+            this.logMessage("Networking | Connection established");
             this.checkConnectionId(this.connection.id);
 
             this.networkConnected = true;
@@ -265,7 +267,7 @@ export class NetworkManager {
         if (!this.networkConnected || this.connection == undefined) //Nothing to disconnect from if never connected
             return;
 
-        console.log("Networking | Disconnecting");
+        this.logMessage("Networking | Disconnecting");
         this.networkConnected = false;
         this.connection.disconnect();
     }
@@ -352,8 +354,8 @@ export class NetworkManager {
 
         let packetString = JSON.stringify(packet);
         this.connection.sendString(packetString, () => {
-            console.log("Networking | DataActionPacketBuffer sent: " + packetString);
-            console.log("Networking | DataActionPacketBuffer flushed");
+            this.logMessage("Networking | DataActionPacketBuffer sent: " + packetString);
+            this.logMessage("Networking | DataActionPacketBuffer flushed");
         });
     }
 
@@ -375,6 +377,12 @@ export class NetworkManager {
         }
 
         if (this.dataActionPacketBuffer.length <= 0)
-            console.log("Networking | DataActionPacketBuffer cleared");
+            this.logMessage("Networking | DataActionPacketBuffer cleared");
+    }
+
+    // Logs a message to the console
+    private static logMessage(message: string) {
+        if (this.debugLog)
+            console.log(message);
     }
 }
