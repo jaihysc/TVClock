@@ -199,9 +199,9 @@ export class TodoViewManager implements IViewController {
 
             // Sets placeholder dates + Datetime pickers
             // @ts-ignore
-            this.newTaskStartDate.datetimepicker({format: "ddd MMM D YYYY h:mm a"});
+            this.newTaskStartDate.datetimepicker({format: "ddd MMM D YYYY h:mm A"});
             // @ts-ignore
-            this.newTaskEndDate.datetimepicker({format: "ddd MMM D YYYY h:mm a"});
+            this.newTaskEndDate.datetimepicker({format: "ddd MMM D YYYY h:mm A"});
             this.updateDatePickerDates();
 
             // Update task list appearance with new data
@@ -308,7 +308,8 @@ export class TodoViewManager implements IViewController {
                     .append(taskName);
 
                 let startEndDate = $("<p class='list-item-description'/>")
-                    .text(task.startDate + " - " + task.endDate);
+                    // @ts-ignore - moment is moment.js, imported by index.html
+                    .text(moment(task.startDate).format("dddd MMMM D YYYY h:mm A") + " - " + moment(task.endDate).format("dddd MMMM D YYYY h:mm A"));
 
                 $("<li class='list-group-item-darker list-group-flush task-list-item'>")
                     .append(div)
@@ -379,8 +380,8 @@ export class TodoViewManager implements IViewController {
         //Load data from the selected task item into fields
         let task = this.taskListTasks[this.selectedTaskIndex];
         this.newTaskText.val(task.text);
-        this.newTaskStartDate.val(TodoViewManager.toFullDateString(task.startDate));
-        this.newTaskEndDate.val(TodoViewManager.toFullDateString(task.endDate));
+        this.newTaskStartDate.val(this.toFullDateString(task.startDate));
+        this.newTaskEndDate.val(this.toFullDateString(task.endDate));
         this.newTaskPriority.val(task.priority);
     }
 
@@ -392,9 +393,9 @@ export class TodoViewManager implements IViewController {
         // this.newTaskPriority.val();  // Don't wipe priority
     }
 
-    private static toFullDateString(date: Date): string {
+    private toFullDateString(date: Date): string {
         // @ts-ignore - Imported by moment.js
-        return moment(date).format( "ddd MMM D YYYY h:mm a");
+        return moment(date).format( "ddd MMM D YYYY h:mm A");
     }
 
     private updateDatePickerDates(): void {
