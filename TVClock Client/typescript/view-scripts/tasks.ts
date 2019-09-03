@@ -107,23 +107,9 @@ export class TodoViewManager implements IViewController {
     loadEvent(): void {
         //Adds a new task to the task list
         this.addButton.on("click", () => {
-            let taskText = String(this.newTaskText.val());
-
-            //Show error text if task does not have a name
-            if (taskText == "") {
-                this.taskErrorText.show();
-                return;
-            }
             this.taskErrorText.hide();
 
-            let startDate = String(this.newTaskStartDate.val());
-            let endDate = String(this.newTaskEndDate.val());
-
-            let priority = Number(this.newTaskPriority.val());
-            if (!priority)
-                priority = Number(this.newTaskPriority.attr("placeholder"));  // Default priority to placeholder if user does not specify
-
-            let newTask = this.validateNewTask(taskText, {start: startDate, end: endDate}, priority);
+            let newTask = this.validateNewTask();
             if (newTask == undefined)
                 return;
 
@@ -152,8 +138,7 @@ export class TodoViewManager implements IViewController {
                     newTask
                 );
             }
-            this.wipeInputFields();
-            this.updateDatePickerDates();
+            this.resetInputFields();
 
             //Refresh task list to include changes
             this.updateTaskList();
@@ -189,6 +174,12 @@ export class TodoViewManager implements IViewController {
 
             this.updateTaskList();
         });
+
+        // Handles keypress events, checks if it is the enter key, if so, it counts as a addButton click
+        document.onkeyup = (event: any) => {
+            if (event.keyCode === 13)  // Enter key
+                this.addButton.trigger("click");
+        }
     }
 
     load(): void {
@@ -202,7 +193,7 @@ export class TodoViewManager implements IViewController {
             this.newTaskStartDate.datetimepicker({format: "ddd MMM D YYYY h:mm A"});
             // @ts-ignore
             this.newTaskEndDate.datetimepicker({format: "ddd MMM D YYYY h:mm A"});
-            this.updateDatePickerDates();
+            this.resetInputFields();
 
             // Update task list appearance with new data
             this.updateTaskList();
@@ -211,31 +202,46 @@ export class TodoViewManager implements IViewController {
 
     // Ensures that the task matches input requirements, dates are current, priority is greater than 0
     // Hash will be auto generated if hash property is undefined
-    private validateNewTask(taskText: string, dates: {start: String; end: String}, priority: number): Task | undefined {
-        if (dates.start == "")
-            dates.start = String(this.newTaskStartDate.attr("placeholder"));
-        if (dates.end == "")
-            dates.end = String(this.newTaskEndDate.attr("placeholder"));
+    private validateNewTask(): Task | undefined {
+        let taskText = String(this.newTaskText.val());
 
-        let startDate = new Date(String(dates.start));
-        let endDate = new Date(String(dates.end));
+        let startDate = new Date(String(this.newTaskStartDate.val()));
+        let endDate = new Date(String(this.newTaskEndDate.val()));
+
+        let priority = Number(this.newTaskPriority.val());
+        if (!priority)
+            priority = Number(this.newTaskPriority.attr("placeholder"));  // Default priority to placeholder if user does not specify
+
+        //Show error text if task is blank or only whitespace
+        if (!taskText.replace(/\s/g, "").length) {
+            this.showErrorMessage("Enter a task name");
+            this.resetInputFields();
+            return;
+        } else {
+            // Trim any newline characters if taskText is not only whitespace
+            taskText = taskText.replace(/\r?\n|\r/, "")
+        }
 
         let currentDate = new Date();
-        currentDate.setDate(currentDate.getDate()-1); //Allow a margin 1 day back
+        currentDate.setDate(currentDate.getDate()-1); // Allow a margin 1 day back
 
         // Validate priority number
         if (priority < 0) {
-            this.taskErrorText.show();
-            this.taskErrorText.text("Priority must be greater than or equal to 0");
+            this.showErrorMessage("Priority must be greater than or equal to 0");
             return;
         } else if (priority > 100000) {
-            this.taskErrorText.show();
-            this.taskErrorText.text("Priority must less than 100 000");
+            this.showErrorMessage("Priority must be less than 100 000");
             return;
         }
 
         //Make sure startDay is current and endDate is after startDate
-        if (startDate >= currentDate && startDate < endDate) {
+        if (startDate < currentDate) {
+            this.showErrorMessage("Start date cannot be in the past");
+            return;
+        } else if (startDate > endDate) {
+            this.showErrorMessage("End date must be after start date");
+            return;
+        } else {
             //Creates a new task object with the user provided info
 
             // Hash is unique identifier made from UNIX timestamp + taskText
@@ -365,8 +371,7 @@ export class TodoViewManager implements IViewController {
         this.editButton.html("Edit task");
         this.removeButton.show();
 
-        this.wipeInputFields();
-        this.updateDatePickerDates();
+        this.resetInputFields();
     }
     private enterEditMode(): void {
         if (this.inEditMode)
@@ -385,12 +390,9 @@ export class TodoViewManager implements IViewController {
         this.newTaskPriority.val(task.priority);
     }
 
-
-    private wipeInputFields(): void {
-        this.newTaskText.val("");
-        this.newTaskStartDate.val("");
-        this.newTaskEndDate.val("");
-        // this.newTaskPriority.val();  // Don't wipe priority
+    private showErrorMessage(message: string) {
+        this.taskErrorText.show();
+        this.taskErrorText.text(message);
     }
 
     private toFullDateString(date: Date): string {
@@ -398,7 +400,13 @@ export class TodoViewManager implements IViewController {
         return moment(date).format( "ddd MMM D YYYY h:mm A");
     }
 
-    private updateDatePickerDates(): void {
+    private resetInputFields(): void {
+        // Clear fields
+        this.newTaskText.val("");
+        this.newTaskStartDate.val("");
+        this.newTaskEndDate.val("");
+        // this.newTaskPriority.val();  // Don't wipe priority field
+
         // Set placeholder start date to current time, and end date to 7 days in the future
         let currentDate = new Date();
         let previousDate = new Date();
