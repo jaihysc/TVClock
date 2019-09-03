@@ -116,7 +116,6 @@ export class TodoViewManager implements IViewController {
             }
             this.taskErrorText.hide();
 
-            this.updatePlaceholderDates();
             let startDate = String(this.newTaskStartDate.val());
             let endDate = String(this.newTaskEndDate.val());
 
@@ -153,8 +152,9 @@ export class TodoViewManager implements IViewController {
                     newTask
                 );
             }
-
             this.wipeInputFields();
+            this.updateDatePickerDates();
+
             //Refresh task list to include changes
             this.updateTaskList();
         });
@@ -197,7 +197,12 @@ export class TodoViewManager implements IViewController {
             this.hideModifierButtons();
             this.taskErrorText.hide();
 
-            this.updatePlaceholderDates();
+            // Sets placeholder dates + Datetime pickers
+            // @ts-ignore
+            this.newTaskStartDate.datetimepicker({format: "ddd MMM D YYYY h:mm a"});
+            // @ts-ignore
+            this.newTaskEndDate.datetimepicker({format: "ddd MMM D YYYY h:mm a"});
+            this.updateDatePickerDates();
 
             // Update task list appearance with new data
             this.updateTaskList();
@@ -360,6 +365,7 @@ export class TodoViewManager implements IViewController {
         this.removeButton.show();
 
         this.wipeInputFields();
+        this.updateDatePickerDates();
     }
     private enterEditMode(): void {
         if (this.inEditMode)
@@ -387,15 +393,26 @@ export class TodoViewManager implements IViewController {
     }
 
     private static toFullDateString(date: Date): string {
-        return `${date.toDateString()} ${date.getHours()}:${date.getMinutes()}`;
+        // @ts-ignore - Imported by moment.js
+        return moment(date).format( "ddd MMM D YYYY h:mm a");
     }
 
-    private updatePlaceholderDates(): void {
-        //Set placeholder start date to current time, and end date to 2 days in the future
+    private updateDatePickerDates(): void {
+        // Set placeholder start date to current time, and end date to 7 days in the future
         let currentDate = new Date();
-        this.newTaskStartDate.attr("placeholder", TodoViewManager.toFullDateString(currentDate));
+        let previousDate = new Date();
+        previousDate.setDate(previousDate.getDate() - 1);  // minDate is set to previous date, user cannot select select anything in the past
 
-        currentDate.setDate(currentDate.getDate()+2); //add 2 days for the future end date
-        this.newTaskEndDate.attr("placeholder", TodoViewManager.toFullDateString(currentDate));
+        // @ts-ignore
+        this.newTaskStartDate.datetimepicker("minDate", previousDate);
+        // @ts-ignore
+        this.newTaskStartDate.datetimepicker("date", currentDate);
+
+        let endDate = new Date();
+        endDate.setDate(currentDate.getDate() + 7); //add 7 days for the future end date
+        // @ts-ignore
+        this.newTaskEndDate.datetimepicker("minDate", previousDate);
+        // @ts-ignore
+        this.newTaskEndDate.datetimepicker("date", endDate);
     }
 }

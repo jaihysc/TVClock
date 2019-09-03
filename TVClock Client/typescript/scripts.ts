@@ -3,3 +3,4 @@
 window.$ = window.jQuery = require('jquery');
 // @ts-ignore
 window.Bootstrap = require('bootstrap');
+require("moment");
