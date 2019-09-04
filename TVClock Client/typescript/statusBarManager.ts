@@ -45,6 +45,12 @@ if (connectionRefreshButton != null) {
     });
 }
 
+// Add F5 as shortcut for refresh button
+$(document).on("keyup", (event: any) => {
+    if (event.keyCode === 116)  // F5 key
+        ipcRenderer.send(NetworkOperation.Reconnect, true);
+});
+
 // Status bar middle text
 let statusBarText = $("#status-bar-middle-text");
 
