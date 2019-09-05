@@ -1,6 +1,7 @@
 import {app, BrowserWindow, ipcMain} from "electron";
 import {DataActionPacket, NetworkManager} from "./NetworkManager";
 import {NetworkingStatus, NetworkOperation, RequestType} from "./RequestTypes";
+import {ViewManager} from "./viewManager";
 
 // Command line arguments
 for (let arg of process.argv) {
@@ -37,26 +38,14 @@ async function createWindow() {
     });
 
     mainWindow.setMenuBarVisibility(false);
-    await mainWindow.loadFile("./views/startup.html");
+    await mainWindow.loadFile("./views/index.html");
 
-    initializeNetworking(async () => {
-        // Connection established:
-        // Load main menu
-        mainWindow.webContents.send(NetworkingStatus.SetConnectionStatus, "Loading menus...");
-        await mainWindow.loadFile("./views/index.html");
-
-        mainWindow.webContents.send(NetworkingStatus.SetConnectionStatus, "connected");
-        mainWindow.webContents.send(NetworkOperation.SetDisplayAddress,{
-            hostname: NetworkManager.hostname,
-            port: String(NetworkManager.port)}
-        );
-
-        NetworkManager.fetchViewData();
-    });
+    mainWindow.webContents.send(NetworkingStatus.SetConnectionStatus, "disconnected");
+    initializeNetworking();
 }
 
-function initializeNetworking(readyCallback: () => void): void {
-    NetworkManager.init(mainWindow, readyCallback);
+function initializeNetworking(): void {
+    NetworkManager.initialize(mainWindow);
 
     //Event handlers from renderer process
     ipcMain.on(NetworkOperation.Reconnect, () => {

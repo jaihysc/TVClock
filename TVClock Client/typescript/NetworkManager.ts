@@ -58,7 +58,6 @@ export class NetworkManager {
     private static connection: Connection;
 
     private static networkConnected: boolean = false;
-    private static readyCallbackUsed: boolean = false; //Whether the initial ready callback was used
 
     private static queuedRequests: {id: number; event: any}[]; //Array of send packets awaiting a response
     private static networkingId: number = 0; //Keeps track of send and received requests
@@ -74,21 +73,16 @@ export class NetworkManager {
     // Buffer to store outbound DataActionPackets
     private static dataActionPacketBuffer: DataActionPacket[] = [];  // Add to front, pop from back as the outbound DataActionPackets are sent
 
-    private static readyCallback: () => void;
     private static dataCallback: (id: number, response: string) => void;
     private static closeCallback: (id: number) => void;
     private static errorCallback: (id: number, str: string) => void;
 
-    public static init(window: BrowserWindow, ready: () => void): void {
+    public static initialize(window: BrowserWindow): void {
         this.window = window;
 
         this.queuedRequests = [];
         this.networkingId = 0;
 
-        this.readyCallback = () => {
-            this.readyCallbackUsed = true;
-            ready();
-        };
         this.dataCallback = (id: number, responseJson: string) => {
             if (responseJson == undefined || id < this.activeConnectionId) //Ignore old connection's events
                 return;
@@ -140,7 +134,7 @@ export class NetworkManager {
             this.window.webContents.send(NetworkingStatus.SetConnectionStatus, "disconnected");
         };
 
-        this.connection = new Connection(this.connectionId++, this.readyCallback, this.dataCallback, this.closeCallback, this.errorCallback);
+        this.connection = new Connection(this.connectionId++, () => {}, this.dataCallback, this.closeCallback, this.errorCallback);
     }
 
     // Handles received packets by dispatching the packet to corresponding handlers
@@ -285,13 +279,8 @@ export class NetworkManager {
 
     private static reconnectConnection(): void {
         this.connection = new Connection(this.connectionId++, () => {
-            // Run ready callback only once
-            if (!this.readyCallbackUsed) {
-                this.readyCallback();
-            } else {
-                // Run this after the first successful connection
-                this.fetchViewData();
-            }
+            // Run this after the first successful connection
+            this.fetchViewData();
         }, this.dataCallback, this.closeCallback, this.errorCallback);
         this.connect();
     }

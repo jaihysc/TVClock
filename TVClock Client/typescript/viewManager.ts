@@ -63,7 +63,7 @@ export class ViewManager {
 
         // Buttons for the different views
         let buttonContainers = $( ".nav-item" );
-        let lastButton = buttonContainers[1];
+        let lastButton = buttonContainers[0];
 
         // Add listeners on all the buttonContainers to load their corresponding view
         for (let i = 0; i < buttonContainers.length; ++i) {
@@ -86,5 +86,8 @@ export class ViewManager {
                 viewControllers[i].load();
             });
         }
+
+        // Load the settings view on startup
+        buttonContainers[2].click();
     }
 }
