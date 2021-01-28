@@ -24,7 +24,7 @@
     "dist": "npm run build && electron-builder"
   },
   "devDependencies": {
-    "electron": "^7.2.4",
+    "electron": "^9.4.0",
     "electron-builder": "^21.1.5"
   },
   "dependencies": {
